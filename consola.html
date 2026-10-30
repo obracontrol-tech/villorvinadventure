@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Consola VillorvinAdventure</title>
+<meta name="theme-color" content="#06162E">
+<meta name="robots" content="noindex">
+<link rel="icon" type="image/png" href="va-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<style>
+:root{--bg:#06162E;--card:#0C2446;--card2:#112E57;--line:#1E4373;--blue:#4DA3FF;--on-blue:#04142B;--txt:#fff;--txt2:#A9BCD6;--red:#EF4444;--green:#22C55E;--amber:#F59E0B}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:var(--bg);color:var(--txt);min-height:100vh}
+button,input,textarea,select{font-family:inherit;font-size:16px}
+a{color:var(--blue)}
+.wrap{max-width:1100px;margin:0 auto;padding:20px 16px 60px}
+.top{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:16px}
+.top img{height:50px;width:auto}
+.top .t{flex:1;min-width:200px}
+.top h1{font-size:21px}
+.top small{color:var(--txt2);font-style:italic;letter-spacing:2px;text-transform:uppercase;font-size:12px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 16px;border-radius:13px;border:1.5px solid var(--line);background:var(--card2);color:var(--txt);font-weight:700;cursor:pointer;text-decoration:none}
+.btn.pri{background:var(--blue);color:var(--on-blue);border-color:var(--blue)}
+.btn.red{border-color:var(--red);color:#FCA5A5}
+.btn.sm{min-height:36px;padding:0 11px;font-size:14px;border-radius:10px}
+.btn:disabled{opacity:.45;cursor:default}
+#gate{min-height:100vh;display:grid;place-items:center;padding:20px}
+.gbox{max-width:420px;width:100%;text-align:center;background:var(--card);border:1.5px solid var(--line);border-radius:22px;padding:30px 22px}
+.gbox img{width:80%;max-width:300px;margin-bottom:10px}
+.gbox p{color:var(--txt2);margin:14px 0 20px;line-height:1.5}
+.tabs{display:flex;gap:8px;overflow-x:auto;padding-bottom:6px;margin-bottom:16px}
+.tab{flex-shrink:0;min-height:42px;padding:0 14px;border-radius:999px;border:1.5px solid var(--line);background:var(--card);color:var(--txt);font-weight:700;cursor:pointer;white-space:nowrap}
+.tab.on{background:var(--blue);color:var(--on-blue);border-color:var(--blue)}
+.tab .dot{display:inline-block;min-width:20px;padding:0 6px;border-radius:99px;background:var(--red);color:#fff;font-size:12px;margin-left:6px}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:16px}
+.stat{background:var(--card);border:1.5px solid var(--line);border-radius:16px;padding:14px}
+.stat b{display:block;font-size:28px}
+.stat span{color:var(--txt2);font-size:14px}
+.bar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+.inp{width:100%;min-height:44px;border-radius:12px;border:1.5px solid var(--line);background:var(--card);color:var(--txt);padding:10px 12px}
+textarea.inp{min-height:90px;resize:vertical;line-height:1.45}
+.bar .inp{flex:1 1 240px;width:auto}
+label.l{display:block;font-weight:700;font-size:14px;margin:12px 0 6px}
+.hint{color:var(--txt2);font-size:13px;margin-top:4px;line-height:1.4}
+.box{background:var(--card);border:1.5px solid var(--line);border-radius:18px;padding:16px;margin-bottom:14px}
+.box h2{font-size:18px;margin-bottom:6px}
+.box h3{font-size:16px;margin-bottom:4px}
+.tbl{background:var(--card);border:1.5px solid var(--line);border-radius:18px;overflow-x:auto}
+table{width:100%;border-collapse:collapse;min-width:640px}
+th,td{text-align:left;padding:11px 13px;border-bottom:1px solid var(--line);font-size:15px;vertical-align:top}
+th{color:var(--txt2);font-size:12.5px;text-transform:uppercase;letter-spacing:.5px}
+tr:last-child td{border-bottom:none}
+.tag{display:inline-block;padding:3px 10px;border-radius:99px;font-size:12px;font-weight:800;margin:0 4px 4px 0}
+.tag.pro{background:var(--blue);color:var(--on-blue)}
+.tag.simple,.tag.gp{background:var(--card2);color:var(--txt2);border:1px solid var(--line)}
+.tag.new{background:var(--amber);color:#1c1300}
+.tag.ok{background:var(--green);color:#03210f}
+.acts{display:flex;gap:6px;flex-wrap:wrap}
+.empty{padding:26px;text-align:center;color:var(--txt2)}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.day{border:1px dashed var(--line);border-radius:12px;padding:10px;margin-top:8px}
+.day .row .inp{flex:1 1 160px;width:auto}
+.chk{display:flex;align-items:center;gap:8px;padding:6px 0;cursor:pointer}
+.chk input{width:20px;height:20px}
+.msg{background:var(--card2);border-radius:12px;padding:10px 12px;margin-top:8px;line-height:1.45;white-space:pre-wrap}
+.msg.rep{border-left:3px solid var(--green)}
+.foot{margin-top:24px;text-align:center;color:var(--txt2);font-size:13px}
+#toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(30px);background:#fff;color:#04142B;padding:12px 18px;border-radius:14px;font-weight:700;opacity:0;transition:.25s;pointer-events:none;z-index:50;max-width:92vw;text-align:center}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+#app{display:none}
+.warn{background:rgba(245,158,11,.12);border:1.5px solid var(--amber);border-radius:14px;padding:12px 14px;margin-bottom:14px;line-height:1.45;font-size:14.5px}
+</style>
+</head>
+<body>
+
+<div id="gate">
+  <div class="gbox">
+    <img src="va-logo.png" alt="VillorvinAdventure">
+    <div style="font-style:italic;letter-spacing:3px;text-transform:uppercase;font-size:12px;color:#D4D4D4">Passion led us here</div>
+    <p id="gMsg">Consola de la organización.<br>Entra con tu cuenta de Google.</p>
+    <button class="btn pri" id="gBtn" onclick="signIn()" style="width:100%">Entrar con Google</button>
+    <button class="btn" id="gOut" onclick="signOut()" style="width:100%;margin-top:10px;display:none">Cambiar de cuenta</button>
+  </div>
+</div>
+
+<div id="app">
+  <div class="wrap">
+    <div class="top">
+      <img src="va-logo.png" alt="VillorvinAdventure">
+      <div class="t"><h1>Consola de la organización</h1><small>Passion led us here</small></div>
+      <button class="btn sm" onclick="signOut()">Salir</button>
+    </div>
+    <nav class="tabs" id="tabs" aria-label="Apartados de la consola"></nav>
+    <main id="view"></main>
+    <p class="foot">Asistencia VillorvinAdventure · 610 200 580 · <a href="https://www.villorvinadventure.com/inicio" target="_blank" rel="noopener">villorvinadventure.com</a></p>
+  </div>
+</div>
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script>
+const FIREBASE_CONFIG={
+  apiKey:"AIzaSyBiPm00hsVVaLJ8VH7DG2JmdJydosDhCQM",
+  authDomain:"villorvinadventure-38c74.firebaseapp.com",
+  projectId:"villorvinadventure-38c74",
+  storageBucket:"villorvinadventure-38c74.firebasestorage.app",
+  messagingSenderId:"788088549275",
+  appId:"1:788088549275:web:ba212f3dcb45e16512bb3e"
+};
+firebase.initializeApp(FIREBASE_CONFIG);
+const auth=firebase.auth(),db=firebase.firestore(),FV=firebase.firestore.FieldValue;
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const jsq=s=>"'"+String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'")+"'";
+function telNorm(t){let d=String(t||'').replace(/[^\d+]/g,'');if(d.startsWith('+'))d=d.slice(1);else if(d.startsWith('00'))d=d.slice(2);else if(d.length===9)d='34'+d;return d}
+const fmt=t=>t?new Date(t).toLocaleString('es-ES',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}):'—';
+const fmtD=t=>t?new Date(t).toLocaleDateString('es-ES',{day:'2-digit',month:'2-digit',year:'numeric'}):'—';
+let toastT;function toast(m){const t=$('toast');t.textContent=m;t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),2800)}
+const safeUrl=u=>/^https?:\/\//i.test(String(u||'').trim())?String(u).trim():'';
+const newId=p=>p+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+
+/* Las tres grupetas de VillorvinAdventure */
+const VA_GPS=[['Rutas del club','Carretera','Medio'],['Salida libre','Mixta','Tranquilo'],['Family Members','Mixta','Medio']];
+
+const S={tab:'ciclistas',members:[],rutas:[],news:[],support:[],aviso:null,club:null,clubId:null,isAdm:false,subs:[],editRuta:null};
+
+/* ---------- Acceso ---------- */
+function gate(msg,showIn,showOut){$('gate').style.display='grid';$('app').style.display='none';$('gMsg').innerHTML=msg;$('gBtn').style.display=showIn?'flex':'none';$('gOut').style.display=showOut?'flex':'none'}
+function signIn(){const p=new firebase.auth.GoogleAuthProvider();p.setCustomParameters({prompt:'select_account'});auth.signInWithPopup(p).catch(e=>{if(/popup/.test(e.code||''))auth.signInWithRedirect(p);else gate('No se pudo entrar: '+esc(e.code||e.message),true,false)})}
+function signOut(){S.subs.forEach(u=>{try{u()}catch(e){}});S.subs=[];auth.signOut().then(()=>gate('Sesión cerrada.',true,false))}
+auth.getRedirectResult().catch(()=>{});
+auth.onAuthStateChanged(async u=>{
+  if(!u||u.isAnonymous){gate('Consola de la organización.<br>Entra con tu cuenta de Google.',true,false);return}
+  gate('Comprobando permisos…',false,false);
+  S.subs.forEach(x=>{try{x()}catch(e){}});S.subs=[];
+  S.subs.push(db.collection('va_members').onSnapshot(s=>{
+    S.members=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.t||0)-(a.t||0));
+    $('gate').style.display='none';$('app').style.display='block';render();
+  },e=>{console.warn(e);gate('🔒 <b>Acceso restringido.</b><br>Esta cuenta no tiene permiso para la consola de VillorvinAdventure.',false,true)}));
+  S.subs.push(db.collection('va_rutas').onSnapshot(s=>{S.rutas=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.t||0)-(a.t||0));render()},e=>console.warn('rutas',e)));
+  S.subs.push(db.collection('va_news').onSnapshot(s=>{S.news=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.t||0)-(a.t||0));render()},e=>console.warn('news',e)));
+  S.subs.push(db.collection('va_support').onSnapshot(s=>{S.support=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.t||0)-(a.t||0));render()},e=>console.warn('support',e)));
+  S.subs.push(db.collection('va_config').doc('aviso').onSnapshot(s=>{S.aviso=s.exists?s.data():null;render()},e=>console.warn('aviso',e)));
+  loadClub(u.uid);
+});
+/* El club: la cuenta de Google de la consola tiene que ser la misma que la del administrador en la app */
+async function loadClub(myUid){
+  try{
+    const us=await db.collection('users').doc(myUid).get();const C=us.exists?us.data().group:null;
+    if(!C){S.club=null;S.clubId=null;render();return}
+    S.clubId=C;
+    S.subs.push(db.collection('groups').doc(C).onSnapshot(s=>{S.club=s.exists?{id:s.id,...s.data()}:null;
+      S.isAdm=!!(S.club&&(S.club.byUid===myUid||(S.club.admins||{})[myUid]));render()},e=>{console.warn('club',e);S.club=null;render()}));
+  }catch(e){console.warn('usuario',e);S.club=null;render()}
+}
+
+/* ---------- Pestañas ---------- */
+const TABS=[['ciclistas','👥 Ciclistas'],['grupetas','🏷️ Grupetas'],['rutas','🗺️ Rutas y fichas'],['consultas','❓ Consultas'],['novedades','🆕 Novedades y aviso'],['copias','💾 Copias']];
+function go(t){S.tab=t;S.editRuta=null;render();window.scrollTo(0,0)}
+function render(){
+  if($('app').style.display!=='block')return;
+  const pend=S.support.filter(x=>!x.reply).length;
+  $('tabs').innerHTML=TABS.map(([k,t])=>`<button class="tab${S.tab===k?' on':''}" onclick="go('${k}')">${t}${k==='consultas'&&pend?`<span class="dot">${pend}</span>`:''}</button>`).join('');
+  const f={ciclistas:vCiclistas,grupetas:vGrupetas,rutas:vRutas,consultas:vConsultas,novedades:vNovedades,copias:vCopias}[S.tab];
+  const keep=document.activeElement&&document.activeElement.id&&$('view').contains(document.activeElement)?document.activeElement.id:null;
+  if(keep&&(S.tab==='rutas'&&S.editRuta||['rq','nT','nX','nL','nG','aX','gpNew','rf'].includes(keep)||/^rep_/.test(keep)))return;   // no borrar lo que estás escribiendo
+  $('view').innerHTML=f();
+}
+const gpList=()=>Object.entries((S.club&&S.club.grupetas)||{}).map(([id,g])=>({id,...g})).sort((a,b)=>String(a.name).localeCompare(String(b.name)));
+const gpName=id=>((S.club&&S.club.grupetas)||{})[id]?.name||'';
+const memberGps=uid=>(((S.club&&S.club.gm)||{})[uid]||[]).map(gpName).filter(Boolean);
+
+/* ---------- 👥 Ciclistas ---------- */
+function vCiclistas(){
+  const q=(($('rq')||{}).value||'').trim().toLowerCase();const wk=Date.now()-7*864e5;const L=S.members;
+  const v=L.filter(x=>!q||String(x.name||'').toLowerCase().includes(q)||String(x.tel||'').replace(/\s/g,'').includes(q.replace(/\s/g,'')));
+  return `<div class="stats">
+    <div class="stat"><b>${L.length}</b><span>Ciclistas registrados</span></div>
+    <div class="stat"><b>${L.filter(x=>x.app==='pro').length}</b><span>En la Pro</span></div>
+    <div class="stat"><b>${L.filter(x=>x.app!=='pro').length}</b><span>En la Simple</span></div>
+    <div class="stat"><b>${L.filter(x=>(x.t||0)>wk).length}</b><span>Nuevos esta semana</span></div></div>
+  <div class="bar"><label for="rq" style="position:absolute;left:-9999px">Buscar ciclista</label><input class="inp" id="rq" type="search" placeholder="Buscar por nombre o móvil…" oninput="$('rbody').innerHTML=rowsCic()"><button class="btn" onclick="csv()">⬇️ Descargar lista (Excel)</button></div>
+  <div class="tbl"><table><thead><tr><th>Ciclista</th><th>Móvil</th><th>App</th><th>Grupetas</th><th>Alta / último cambio</th><th>Contactar</th></tr></thead><tbody id="rbody">${rowsCic(v)}</tbody></table></div>`;
+}
+function rowsCic(v){
+  if(!v){const q=(($('rq')||{}).value||'').trim().toLowerCase();v=S.members.filter(x=>!q||String(x.name||'').toLowerCase().includes(q)||String(x.tel||'').replace(/\s/g,'').includes(q.replace(/\s/g,'')))}
+  return v.length?v.map(x=>{const n=telNorm(x.tel);const g=memberGps(x.id);return `<tr>
+    <td><b>${esc(x.name)}</b></td><td>${esc(x.tel)}</td>
+    <td><span class="tag ${x.app==='pro'?'pro':'simple'}">${x.app==='pro'?'PRO':'SIMPLE'}</span></td>
+    <td>${g.length?g.map(n=>`<span class="tag gp">${esc(n)}</span>`).join(''):'<span style="color:var(--txt2)">—</span>'}</td>
+    <td>${fmt(x.t)}</td>
+    <td><div class="acts">${n?`<a class="btn sm" href="tel:+${n}">📞 Llamar</a><a class="btn sm" href="https://wa.me/${n}" target="_blank" rel="noopener">💬 WhatsApp</a>`:''}<button class="btn sm red" onclick="cicDel(${jsq(x.id)})" aria-label="Borrar a ${esc(x.name)}">🗑️ Borrar</button></div></td></tr>`}).join('')
+    :`<tr><td colspan="6" class="empty">${S.members.length?'Ningún ciclista coincide con la búsqueda':'Todavía no hay ciclistas registrados'}</td></tr>`;
+}
+async function cicDel(id){
+  const x=S.members.find(m=>m.id===id);if(!x)return;
+  const inClub=!!(S.club&&(S.club.members||{})[id]);
+  let msg='¿Borrar a «'+(x.name||'Ciclista')+'» ('+(x.tel||'sin móvil')+') de la lista de ciclistas?\n\nÚsalo para duplicados o fichas que ya no sirven.';
+  if(inClub&&S.isAdm)msg+='\n\nTambién está en el club: se le sacará del club y de sus grupetas.';
+  msg+='\n\nSi vuelve a entrar en la app y cambia su nombre o su móvil, volverá a aparecer.';
+  if(!confirm(msg))return;
+  try{
+    await db.collection('va_members').doc(id).delete();
+    if(inClub&&S.isAdm&&S.club.byUid!==id){const up={['members.'+id]:FV.delete(),['gm.'+id]:FV.delete()};if((S.club.admins||{})[id])up['admins.'+id]=FV.delete();if((S.club.captains||{})[id])up['captains.'+id]=FV.delete();await clubRef().update(up).catch(e=>console.warn('club',e))}
+    toast('Ciclista borrado');
+  }catch(e){fail(e)}
+}
+function csv(){
+  const q=v=>'"'+String(v??'').replace(/"/g,'""')+'"';
+  const rows=[['Ciclista','Móvil','App','Grupetas','Alta / último cambio']].concat(S.members.map(x=>[x.name,x.tel,x.app==='pro'?'Pro':'Simple',memberGps(x.id).join(' / '),fmt(x.t)]));
+  download('ciclistas-villorvinadventure.csv','﻿'+rows.map(r=>r.map(q).join(';')).join('\n'),'text/csv;charset=utf-8');
+}
+
+/* ---------- 🏷️ Grupetas ---------- */
+function clubWarn(){
+  if(!S.clubId)return `<div class="warn">⚠️ <b>Esta cuenta de Google no está unida al club en la app.</b><br>Para gestionar las grupetas desde aquí, en el móvil de la organización abre la app → <b>Perfil → Tu cuenta de Google → Guardar mi cuenta con Google</b> y elige <b>esta misma cuenta</b>. Después recarga la consola.</div>`;
+  if(!S.club)return `<div class="warn">Cargando el club…</div>`;
+  if(!S.isAdm)return `<div class="warn">⚠️ Esta cuenta está en el club <b>${esc(S.club.name)}</b>, pero no es administradora. Pide al creador del club que te haga administrador.</div>`;
+  return '';
+}
+function vGrupetas(){
+  const w=clubWarn();if(w)return w;
+  const L=gpList();const mem=Object.entries(S.club.members||{}).sort((a,b)=>String(a[1]).localeCompare(String(b[1])));
+  const miss=VA_GPS.filter(([n])=>!L.some(g=>g.name===n));
+  return `<div class="box"><h2>Club ${esc(S.club.name)} · código <span style="letter-spacing:2px">${esc(S.club.id)}</span></h2><p class="hint">${mem.length} miembros en el club. Cada ciclista puede estar en varias grupetas.</p>
+   ${miss.length?`<button class="btn pri" style="margin-top:10px" onclick="gpCreateVA()">➕ Crear ${miss.map(m=>m[0]).join(', ')}</button>`:''}
+   <div class="row" style="margin-top:10px"><input class="inp" id="gpNew" maxlength="30" placeholder="Otra grupeta (nombre)" style="flex:1 1 200px;width:auto"><button class="btn" onclick="gpAdd()">➕ Añadir</button></div></div>
+  <div class="grid2">${L.map(g=>{const ids=Object.entries(S.club.gm||{}).filter(([k,l])=>Array.isArray(l)&&l.includes(g.id)&&(S.club.members||{})[k]).map(([k])=>k);
+    return `<div class="box"><div class="row" style="justify-content:space-between"><h3>${esc(g.name)}</h3><span class="tag gp">${ids.length} ciclistas</span></div>
+     <p class="hint">${esc(g.mod||'')}${g.lvl?' · '+esc(g.lvl):''}</p>
+     <div style="margin-top:8px;max-height:260px;overflow:auto">${mem.length?mem.map(([k,n])=>`<label class="chk"><input type="checkbox" ${ids.includes(k)?'checked':''} onchange="gpToggle(${jsq(k)},${jsq(g.id)},this.checked)"> ${esc(n)}</label>`).join(''):'<p class="hint">Aún no hay miembros.</p>'}</div>
+     <div class="acts" style="margin-top:10px"><button class="btn sm" onclick="gpRename(${jsq(g.id)})">✏️ Renombrar</button><button class="btn sm red" onclick="gpDel(${jsq(g.id)})">🗑️ Eliminar</button></div></div>`}).join('')||'<div class="empty">Todavía no hay grupetas.</div>'}</div>`;
+}
+const clubRef=()=>db.collection('groups').doc(S.club.id);
+async function gpCreateVA(){
+  const L=gpList();const up={};let i=0;
+  VA_GPS.filter(([n])=>!L.some(g=>g.name===n)).forEach(([name,mod,lvl])=>{up['grupetas.'+newId('g')+(i++)]={name,mod,lvl,resp:{},t:Date.now()}});
+  try{await clubRef().update(up);toast('✅ Grupetas creadas')}catch(e){fail(e)}
+}
+async function gpAdd(){const n=($('gpNew').value||'').trim().slice(0,30);if(!n){toast('Escribe el nombre');return}
+  try{await clubRef().update({['grupetas.'+newId('g')]:{name:n,mod:'Mixta',lvl:'Medio',resp:{},t:Date.now()}});toast('✅ Grupeta creada')}catch(e){fail(e)}}
+async function gpRename(id){const g=S.club.grupetas[id];const n=(prompt('Nuevo nombre de la grupeta',g.name)||'').trim().slice(0,30);if(!n||n===g.name)return;
+  try{await clubRef().update({['grupetas.'+id]:{...g,name:n,t:Date.now()}});toast('Nombre cambiado')}catch(e){fail(e)}}
+async function gpDel(id){if(!confirm('¿Eliminar la grupeta «'+gpName(id)+'»? Sus ciclistas siguen en el club.'))return;
+  const up={['grupetas.'+id]:FV.delete()};Object.entries(S.club.gm||{}).forEach(([k,l])=>{if(Array.isArray(l)&&l.includes(id)){const nx=l.filter(x=>x!==id);up['gm.'+k]=nx.length?nx:FV.delete()}});
+  try{await clubRef().update(up);db.collection('rank').doc(S.club.id+'_'+id).delete().catch(()=>{});toast('Grupeta eliminada')}catch(e){fail(e)}}
+async function gpToggle(k,id,on){const l=((S.club.gm||{})[k]||[]).filter(x=>x!==id);if(on)l.push(id);
+  try{await clubRef().update({['gm.'+k]:l.length?l:FV.delete()})}catch(e){fail(e)}}
+
+/* ---------- 🗺️ Rutas y fichas ---------- */
+function gpOptions(sel){return `<option value="">👥 Todos (también la Simple)</option>`+gpList().map(g=>`<option value="${esc(g.id)}"${sel===g.id?' selected':''}>${esc(g.name)}</option>`).join('')}
+function vRutas(){
+  if(S.editRuta)return rutaForm(S.editRuta);
+  return `<div class="box"><h2>Rutas del club</h2><p class="hint">Cada ruta es una ficha: fecha, uno o varios días con su track (GPX), un PDF con toda la información y para qué grupeta es. Los ciclistas la ven en la app en «Rutas del club».</p>
+   <button class="btn pri" style="margin-top:10px" onclick="rutaNew()">➕ Nueva ruta</button></div>
+  ${S.rutas.length?`<div class="tbl"><table><thead><tr><th>Ruta</th><th>Fecha</th><th>Días</th><th>Para</th><th>PDF</th><th></th></tr></thead><tbody>${S.rutas.map(r=>`<tr>
+    <td><b>${esc(r.title)}</b>${r.info?`<div class="hint">${esc(String(r.info).slice(0,90))}${String(r.info).length>90?'…':''}</div>`:''}</td>
+    <td>${r.date?esc(r.date.split('-').reverse().join('/')):'—'}</td><td>${(r.days||[]).length||1}</td>
+    <td>${r.gp?`<span class="tag gp">${esc(gpName(r.gp)||'Grupeta borrada')}</span>`:'<span class="tag simple">Todos</span>'}</td>
+    <td>${safeUrl(r.pdf)?`<a href="${esc(safeUrl(r.pdf))}" target="_blank" rel="noopener">Ver PDF</a>`:'—'}</td>
+    <td><div class="acts"><button class="btn sm" onclick="rutaEdit(${jsq(r.id)})">✏️ Editar</button><button class="btn sm red" onclick="rutaDel(${jsq(r.id)})">🗑️</button></div></td></tr>`).join('')}</tbody></table></div>`:'<div class="empty">Todavía no hay rutas. Pulsa «Nueva ruta».</div>'}`;
+}
+function rutaNew(){S.editRuta={id:'',title:'',date:'',info:'',pdf:'',gp:'',days:[{title:'Día 1',km:'',gpx:''}]};render()}
+function rutaEdit(id){const r=S.rutas.find(x=>x.id===id);if(!r)return;S.editRuta=JSON.parse(JSON.stringify({...r,days:(r.days&&r.days.length)?r.days:[{title:'Día 1',km:'',gpx:''}]}));render()}
+function rutaForm(r){
+  return `<div class="box"><h2>${r.id?'Editar ruta':'Nueva ruta'}</h2>
+   <label class="l" for="rT">Nombre de la ruta</label><input class="inp" id="rT" maxlength="80" value="${esc(r.title)}" placeholder="Ej. Ruta de la Segarra">
+   <div class="grid2"><div><label class="l" for="rD">Fecha (si es una salida con día)</label><input class="inp" id="rD" type="date" value="${esc(r.date||'')}"></div>
+   <div><label class="l" for="rG">¿Para quién?</label><select class="inp" id="rG">${gpOptions(r.gp)}</select></div></div>
+   <label class="l" for="rI">Información</label><textarea class="inp" id="rI" maxlength="2000" placeholder="Punto de salida, hora, nivel, qué llevar, precio…">${esc(r.info||'')}</textarea>
+   <label class="l" for="rP">Enlace del PDF con toda la información</label><input class="inp" id="rP" type="url" value="${esc(r.pdf||'')}" placeholder="https://drive.google.com/…">
+   <p class="hint">Sube el PDF a tu Google Drive, pulsa «Compartir → Cualquier persona con el enlace» y pega aquí el enlace.</p>
+   <label class="l">Días y tracks</label><div id="rDays">${r.days.map((d,i)=>`<div class="day"><div class="row"><b style="min-width:60px">Día ${i+1}</b>
+     <input class="inp" id="dT${i}" maxlength="60" value="${esc(d.title||'')}" placeholder="Etapa (ej. Cervera – Guissona)">
+     <input class="inp" id="dK${i}" maxlength="8" inputmode="decimal" value="${esc(d.km||'')}" placeholder="km" style="flex:0 1 90px">
+     ${r.days.length>1?`<button class="btn sm red" onclick="dayDel(${i})" aria-label="Quitar día ${i+1}">✕</button>`:''}</div>
+     <input class="inp" id="dG${i}" type="url" style="margin-top:8px" value="${esc(d.gpx||'')}" placeholder="Enlace del track GPX (Drive, Wikiloc, Komoot…)"></div>`).join('')}</div>
+   <button class="btn sm" style="margin-top:10px" onclick="dayAdd()">➕ Añadir otro día</button>
+   <div class="row" style="margin-top:18px"><button class="btn pri" onclick="rutaSave()">💾 Guardar ruta</button><button class="btn" onclick="S.editRuta=null;render()">Cancelar</button></div></div>`;
+}
+function rutaRead(){const r=S.editRuta;r.title=$('rT').value.trim().slice(0,80);r.date=$('rD').value||'';r.gp=$('rG').value||'';r.info=$('rI').value.trim().slice(0,2000);r.pdf=$('rP').value.trim().slice(0,500);
+  r.days=r.days.map((d,i)=>({title:($('dT'+i).value||'').trim().slice(0,60),km:($('dK'+i).value||'').trim().slice(0,8),gpx:($('dG'+i).value||'').trim().slice(0,500)}));return r}
+function dayAdd(){const r=rutaRead();r.days.push({title:'Día '+(r.days.length+1),km:'',gpx:''});$('view').innerHTML=rutaForm(r)}
+function dayDel(i){const r=rutaRead();r.days.splice(i,1);$('view').innerHTML=rutaForm(r)}
+async function rutaSave(){
+  const r=rutaRead();if(!r.title){toast('Pon un nombre a la ruta');return}
+  if(r.pdf&&!safeUrl(r.pdf)){toast('El enlace del PDF tiene que empezar por https://');return}
+  if(r.days.some(d=>d.gpx&&!safeUrl(d.gpx))){toast('Los enlaces de los tracks tienen que empezar por https://');return}
+  const id=r.id||newId('r');const data={title:r.title,date:r.date,gp:r.gp,info:r.info,pdf:r.pdf,days:r.days.slice(0,14),t:Date.now()};
+  try{await db.collection('va_rutas').doc(id).set(data);S.editRuta=null;toast('✅ Ruta guardada');render()}catch(e){fail(e)}
+}
+async function rutaDel(id){const r=S.rutas.find(x=>x.id===id);if(!confirm('¿Borrar la ruta «'+(r?r.title:'')+'»?'))return;
+  try{await db.collection('va_rutas').doc(id).delete();toast('Ruta borrada')}catch(e){fail(e)}}
+
+/* ---------- ❓ Consultas ---------- */
+function vConsultas(){
+  const pend=S.support.filter(x=>!x.reply),done=S.support.filter(x=>x.reply);
+  const card=x=>{const n=telNorm(x.tel);return `<div class="box"><div class="row" style="justify-content:space-between"><h3>${esc(x.name||'Ciclista')} ${x.reply?'<span class="tag ok">Respondida</span>':'<span class="tag new">Pendiente</span>'}</h3><span class="hint">${fmt(x.t)}</span></div>
+    ${x.tel?`<div class="hint">📞 ${esc(x.tel)}</div>`:''}<div class="msg">${esc(x.text)}</div>
+    ${x.reply?`<div class="msg rep"><b>Respuesta (${fmt(x.replyAt)}):</b>\n${esc(x.reply)}</div>`:''}
+    <label class="l" for="rep_${esc(x.id)}">${x.reply?'Cambiar la respuesta':'Tu respuesta'}</label><textarea class="inp" id="rep_${esc(x.id)}" maxlength="1500" placeholder="Escribe la respuesta. Le saldrá al ciclista en la app."></textarea>
+    <div class="acts" style="margin-top:8px"><button class="btn pri sm" onclick="supReply(${jsq(x.id)})">📤 Responder</button>${n?`<a class="btn sm" href="https://wa.me/${n}" target="_blank" rel="noopener">💬 WhatsApp</a><a class="btn sm" href="tel:+${n}">📞 Llamar</a>`:''}<button class="btn sm red" onclick="supDel(${jsq(x.id)})">🗑️ Borrar</button></div></div>`};
+  return `<div class="box"><h2>Consultas de los ciclistas</h2><p class="hint">Los ciclistas preguntan desde la app («❓ Consultas» en la tarjeta de Inicio). Tu respuesta les aparece en la app.</p></div>
+   ${pend.length?`<h3 style="margin:6px 0 10px">Pendientes (${pend.length})</h3>`+pend.map(card).join(''):'<div class="empty">No hay consultas pendientes. 👍</div>'}
+   ${done.length?`<h3 style="margin:16px 0 10px">Respondidas (${done.length})</h3>`+done.map(card).join(''):''}`;
+}
+async function supReply(id){const t=($('rep_'+id).value||'').trim().slice(0,1500);if(!t){toast('Escribe la respuesta');return}
+  try{await db.collection('va_support').doc(id).update({reply:t,replyAt:Date.now(),seen:false});toast('✅ Respuesta enviada');$('rep_'+id).value='';render()}catch(e){fail(e)}}
+async function supDel(id){if(!confirm('¿Borrar esta consulta?'))return;try{await db.collection('va_support').doc(id).delete();toast('Consulta borrada')}catch(e){fail(e)}}
+
+/* ---------- 🆕 Novedades y aviso general ---------- */
+function vNovedades(){
+  const a=S.aviso;
+  return `<div class="grid2"><div class="box"><h2>📣 Aviso general</h2><p class="hint">Sale arriba del todo en la app de todos los ciclistas hasta que lo quites. Para algo urgente o importante (ej. «Ruta del domingo suspendida por lluvia»).</p>
+    ${a&&a.active&&a.text?`<div class="msg" style="border-left:3px solid var(--amber)">${esc(a.text)}<div class="hint">Publicado ${fmt(a.t)}</div></div>`:'<p class="hint" style="margin-top:8px">Ahora no hay ningún aviso publicado.</p>'}
+    <label class="l" for="aX">Texto del aviso</label><textarea class="inp" id="aX" maxlength="280" placeholder="Máximo 280 caracteres"></textarea>
+    <div class="acts" style="margin-top:8px"><button class="btn pri" onclick="avisoSave()">📣 Publicar aviso</button>${a&&a.active?`<button class="btn red" onclick="avisoOff()">Quitar aviso</button>`:''}</div></div>
+   <div class="box"><h2>🆕 Nueva novedad</h2><p class="hint">Las novedades quedan en la app, en «🆕 Novedades», y a los ciclistas les sale un aviso la próxima vez que la abren.</p>
+    <label class="l" for="nT">Título</label><input class="inp" id="nT" maxlength="80" placeholder="Ej. Nueva equipación 2027">
+    <label class="l" for="nX">Texto</label><textarea class="inp" id="nX" maxlength="1500"></textarea>
+    <label class="l" for="nG">¿Para quién?</label><select class="inp" id="nG">${gpOptions('')}</select>
+    <label class="l" for="nL">Enlace (opcional)</label><input class="inp" id="nL" type="url" placeholder="https://www.villorvinadventure.com/comunidad/novedades">
+    <button class="btn pri" style="margin-top:12px" onclick="newsSave()">📤 Publicar novedad</button></div></div>
+  <h3 style="margin:10px 0">Novedades publicadas (${S.news.length})</h3>
+  ${S.news.length?S.news.map(n=>`<div class="box"><div class="row" style="justify-content:space-between"><h3>${esc(n.title)}</h3><span class="hint">${fmtD(n.t)}${n.gp?' · '+esc(gpName(n.gp)||'Grupeta borrada'):' · Todos'}</span></div><div class="msg">${esc(n.text)}</div>${safeUrl(n.link)?`<p style="margin-top:6px"><a href="${esc(safeUrl(n.link))}" target="_blank" rel="noopener">${esc(n.link)}</a></p>`:''}<button class="btn sm red" style="margin-top:8px" onclick="newsDel(${jsq(n.id)})">🗑️ Borrar</button></div>`).join(''):'<div class="empty">Aún no hay novedades.</div>'}`;
+}
+async function avisoSave(){const t=($('aX').value||'').trim().slice(0,280);if(!t){toast('Escribe el aviso');return}
+  try{await db.collection('va_config').doc('aviso').set({text:t,active:true,t:Date.now()});toast('📣 Aviso publicado');$('aX').value='';render()}catch(e){fail(e)}}
+async function avisoOff(){try{await db.collection('va_config').doc('aviso').set({text:(S.aviso&&S.aviso.text)||'',active:false,t:Date.now()});toast('Aviso quitado')}catch(e){fail(e)}}
+async function newsSave(){const ti=($('nT').value||'').trim().slice(0,80),tx=($('nX').value||'').trim().slice(0,1500),li=($('nL').value||'').trim().slice(0,500);
+  if(!ti||!tx){toast('Pon título y texto');return}if(li&&!safeUrl(li)){toast('El enlace tiene que empezar por https://');return}
+  try{await db.collection('va_news').doc(newId('n')).set({title:ti,text:tx,link:li,gp:$('nG').value||'',t:Date.now()});toast('✅ Novedad publicada');$('nT').value='';$('nX').value='';$('nL').value=''}catch(e){fail(e)}}
+async function newsDel(id){if(!confirm('¿Borrar esta novedad?'))return;try{await db.collection('va_news').doc(id).delete();toast('Novedad borrada')}catch(e){fail(e)}}
+
+/* ---------- 💾 Copias y restaurar ---------- */
+function vCopias(){
+  return `<div class="grid2"><div class="box"><h2>💾 Hacer una copia</h2><p class="hint">Descarga en un archivo todo lo de la consola: ciclistas, rutas y fichas, novedades, aviso, consultas y las grupetas del club. Guárdalo en el PC o en tu Drive.</p>
+    <p class="hint" style="margin-top:8px">${S.members.length} ciclistas · ${S.rutas.length} rutas · ${S.news.length} novedades · ${S.support.length} consultas · ${gpList().length} grupetas</p>
+    <button class="btn pri" style="margin-top:12px" onclick="backup()">⬇️ Descargar copia</button></div>
+   <div class="box"><h2>♻️ Restaurar una copia</h2><p class="hint">Vuelve a poner lo que había en la copia. Lo que tenga el mismo nombre se sobrescribe; lo nuevo que no esté en la copia se queda.</p>
+    <label class="l" for="rf">Archivo de copia (.json)</label><input class="inp" id="rf" type="file" accept=".json,application/json">
+    <button class="btn" style="margin-top:12px" onclick="restore()">♻️ Restaurar</button><div id="rstMsg" class="hint" style="margin-top:8px"></div></div></div>`;
+}
+function download(name,text,type){const b=new Blob([text],{type});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),4000)}
+function backup(){
+  const strip=l=>l.map(({id,...d})=>({id,...d}));
+  const data={app:'VillorvinAdventure',v:1,at:Date.now(),members:strip(S.members),rutas:strip(S.rutas),news:strip(S.news),support:strip(S.support),aviso:S.aviso,
+    club:S.club?{id:S.club.id,name:S.club.name,grupetas:S.club.grupetas||{},gm:S.club.gm||{}}:null};
+  const d=new Date();download('copia-villorvinadventure-'+d.toISOString().slice(0,10)+'.json',JSON.stringify(data,null,1),'application/json');toast('✅ Copia descargada');
+}
+async function restore(){
+  const f=$('rf').files[0];if(!f){toast('Elige el archivo de copia');return}
+  let d;try{d=JSON.parse(await f.text())}catch(e){toast('El archivo no es una copia válida');return}
+  if(!d||d.app!=='VillorvinAdventure'){toast('Este archivo no es una copia de VillorvinAdventure');return}
+  if(!confirm('¿Restaurar la copia del '+fmt(d.at)+'? Se sobrescribe lo que tenga el mismo nombre.'))return;
+  const msg=$('rstMsg');msg.textContent='Restaurando…';let n=0,err=0;
+  const put=async(col,l,pick)=>{for(const x of (l||[])){if(!x||!x.id||!/^[A-Za-z0-9_-]{1,80}$/.test(x.id))continue;try{await db.collection(col).doc(x.id).set(pick(x));n++}catch(e){err++}}};
+  await put('va_members',d.members,x=>({name:String(x.name||'').slice(0,40),tel:String(x.tel||'').slice(0,20),t:+x.t||Date.now(),app:x.app==='pro'?'pro':'simple'}));
+  await put('va_rutas',d.rutas,x=>({title:String(x.title||'').slice(0,80),date:String(x.date||''),gp:String(x.gp||''),info:String(x.info||'').slice(0,2000),pdf:String(x.pdf||'').slice(0,500),days:(x.days||[]).slice(0,14).map(y=>({title:String(y.title||'').slice(0,60),km:String(y.km||'').slice(0,8),gpx:String(y.gpx||'').slice(0,500)})),t:+x.t||Date.now()}));
+  await put('va_news',d.news,x=>({title:String(x.title||'').slice(0,80),text:String(x.text||'').slice(0,1500),link:String(x.link||'').slice(0,500),gp:String(x.gp||''),t:+x.t||Date.now()}));
+  await put('va_support',d.support,x=>{const o={uid:String(x.uid||''),name:String(x.name||'').slice(0,40),tel:String(x.tel||'').slice(0,20),text:String(x.text||'').slice(0,1500),t:+x.t||Date.now()};if(x.reply){o.reply=String(x.reply).slice(0,1500);o.replyAt=+x.replyAt||Date.now();o.seen=!!x.seen}return o});
+  if(d.aviso){try{await db.collection('va_config').doc('aviso').set({text:String(d.aviso.text||'').slice(0,280),active:!!d.aviso.active,t:+d.aviso.t||Date.now()});n++}catch(e){err++}}
+  if(d.club&&S.club&&S.isAdm&&d.club.grupetas){try{await clubRef().update({grupetas:d.club.grupetas,gm:d.club.gm||{}});n++}catch(e){err++}}
+  msg.textContent=`✅ Restaurado: ${n} elementos${err?` · ${err} no se pudieron restaurar`:''}.`+(d.club&&!(S.club&&S.isAdm)?' Las grupetas no se restauraron: esta cuenta no es administradora del club.':'');
+}
+function fail(e){console.warn(e);toast(/permission/i.test(e&&(e.code||e.message)||'')?'🔒 Sin permiso. Revisa las reglas de Firebase o la cuenta.':'No se pudo guardar. Revisa la conexión.')}
+</script>
+</body>
+</html>

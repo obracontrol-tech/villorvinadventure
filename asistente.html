@@ -1,0 +1,415 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#06162E">
+<meta name="robots" content="noindex">
+<title>Asistente VillorvinAdventure (beta)</title>
+<link rel="icon" href="va-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#06162E;--card:#0C2446;--card2:#112E57;--line:#1E4373;--lime:#4DA3FF;--on-lime:#04142B;--txt:#fff;--txt2:#9AA8BC;--red:#EF4444;--green:#22C55E;--r:20px}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;min-height:100%;background:var(--bg);color:var(--txt);font-family:'Plus Jakarta Sans',system-ui,sans-serif}
+body{max-width:640px;margin:0 auto}
+button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
+a{color:var(--lime)}
+header{display:flex;align-items:center;gap:10px;padding:14px 16px 10px;padding-top:max(14px,env(safe-area-inset-top))}
+.back{width:42px;height:42px;border-radius:50%;background:var(--card);display:grid;place-items:center;text-decoration:none;color:var(--txt);font-size:22px;flex:none}
+header h1{font-size:21px;margin:0;font-weight:800;flex:1;line-height:1.1}
+header h1 small{display:block;font-size:12px;font-weight:600;color:var(--txt2)}
+.beta{background:var(--lime);color:var(--on-lime);font-size:11px;font-weight:800;padding:4px 9px;border-radius:99px;letter-spacing:.5px}
+.cfg{width:42px;height:42px;border-radius:50%;background:var(--card);font-size:18px;flex:none}
+#loc{margin:0 16px 8px;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:10px 12px;display:flex;flex-wrap:wrap;gap:10px;align-items:center}#loc .t{min-width:150px}
+#loc .t{flex:1;font-size:13.5px;color:var(--txt2);line-height:1.35}
+#loc .t b{color:var(--txt);font-size:14.5px}
+#loc button{background:var(--card2);border:1px solid var(--line);padding:9px 12px;border-radius:12px;font-weight:700;font-size:13px;white-space:nowrap}
+#loc button.on{background:var(--lime);color:var(--on-lime);border-color:var(--lime)}
+#near{margin:0 16px 8px;display:none}
+#near summary{font-size:13px;color:var(--txt2);font-weight:700;padding:4px 2px;cursor:pointer}
+#near ul{list-style:none;margin:6px 0 0;padding:0;display:grid;gap:6px;max-height:210px;overflow:auto}
+#near li{background:var(--card);border-radius:12px;padding:8px 10px;display:flex;gap:8px;align-items:center;font-size:13.5px}
+#near li span{flex:1}
+#near li small{color:var(--txt2)}
+#near li a{font-size:12px;font-weight:700;text-decoration:none;background:var(--card2);padding:6px 9px;border-radius:10px;white-space:nowrap}
+main{padding:4px 16px 12px;display:flex;flex-direction:column;gap:10px;min-height:40vh}
+.hello{background:var(--card);border-radius:var(--r);padding:16px}
+.hello h2{margin:0 0 6px;font-size:18px}
+.hello p{margin:0 0 12px;color:var(--txt2);font-size:14px;line-height:1.45}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{background:var(--card2);border:1px solid var(--line);border-radius:99px;padding:9px 13px;font-size:13.5px;font-weight:600}
+.msg{max-width:88%;padding:11px 14px;border-radius:18px;font-size:15.5px;line-height:1.5;white-space:pre-wrap;word-wrap:break-word}
+.me{align-self:flex-end;background:var(--lime);color:var(--on-lime);border-bottom-right-radius:6px;font-weight:600}
+.ai{align-self:flex-start;background:var(--card);border-bottom-left-radius:6px}
+.ai .act{display:flex;gap:6px;margin-top:8px}
+.ai .act button{font-size:12.5px;color:var(--txt2);background:var(--card2);padding:5px 10px;border-radius:10px;font-weight:600}
+.lee{margin-top:10px;border-top:1px solid var(--line);padding-top:8px;font-size:12.5px;color:var(--txt2)}
+.lee a{display:flex;align-items:center;gap:8px;margin-top:6px;background:var(--card2);border-radius:12px;padding:8px 10px;text-decoration:none;color:var(--txt);font-size:13.5px;font-weight:600}
+.lee a small{display:block;color:var(--txt2);font-weight:500;font-size:11.5px}
+.srcs{margin-top:14px}.srcs p{margin:0 0 6px;font-size:12.5px}
+.err{align-self:center;color:#FCA5A5;font-size:13.5px;text-align:center;max-width:90%}
+.dots span{display:inline-block;width:7px;height:7px;margin:0 2px;border-radius:50%;background:var(--txt2);animation:b 1s infinite}
+.dots span:nth-child(2){animation-delay:.15s}.dots span:nth-child(3){animation-delay:.3s}
+@keyframes b{0%,80%,100%{opacity:.25}40%{opacity:1}}
+.sos{align-self:stretch;background:#3B1219;border:2px solid var(--red);border-radius:var(--r);padding:14px}
+.sos h3{margin:0 0 6px;font-size:17px;color:#FCA5A5}
+.sos p{margin:0 0 12px;font-size:14px;line-height:1.45}
+.sos a{display:block;text-align:center;background:var(--red);color:#fff;text-decoration:none;font-weight:800;font-size:19px;padding:14px;border-radius:14px}
+.gem{margin:0 16px 8px;display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:10px 12px;text-decoration:none;color:var(--txt)}
+.gem div{flex:1;font-size:13px;color:var(--txt2);line-height:1.3}
+.gem b{color:var(--txt);font-size:14px}
+.gem i{font-style:normal;font-size:22px}
+.gem.mini{padding:6px 12px;border-radius:12px}.gem.mini div{font-size:0}.gem.mini div b{font-size:0}.gem.mini div b::after{content:'Gemini Live (voz y cámara)';font-size:13px}.gem.mini i{font-size:16px}
+#loc.mini{padding:6px 8px 6px 12px;border-radius:12px}#loc.mini .t{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}#loc.mini .t br{display:none}#loc.mini .t b{font-size:13.5px;margin-right:6px}#loc.mini button{padding:6px 10px;font-size:12px}
+#near.mini summary{padding:0 2px;font-size:12.5px}
+header.mini{padding-bottom:4px}header.mini .back,header.mini .cfg{width:36px;height:36px;font-size:16px}header.mini h1{font-size:18px}header.mini h1 small{display:none}
+footer{position:sticky;bottom:0;z-index:5;padding:8px 12px calc(10px + env(safe-area-inset-bottom));background:var(--bg);border-top:1px solid var(--line)}
+.opts{display:flex;gap:8px;margin-bottom:8px}
+.tog{flex:1;display:flex;align-items:center;justify-content:center;gap:6px;font-size:12.5px;font-weight:700;color:var(--txt2);background:var(--card);border:1px solid var(--line);border-radius:12px;padding:8px 6px}
+.tog.on{color:var(--on-lime);background:var(--lime);border-color:var(--lime)}
+.bar{display:flex;gap:8px;align-items:flex-end}
+textarea{flex:1;resize:none;background:var(--card);color:var(--txt);border:1px solid var(--line);border-radius:18px;padding:12px 14px;font:inherit;font-size:15.5px;max-height:120px;min-height:48px;outline:none}
+textarea:focus{border-color:var(--lime)}
+.rb{width:48px;height:48px;border-radius:50%;display:grid;place-items:center;flex:none;font-size:20px}
+#mic{background:var(--card2);border:1px solid var(--line)}
+#mic.rec{background:var(--red);border-color:var(--red);animation:p 1.2s infinite}
+@keyframes p{50%{box-shadow:0 0 0 8px rgba(239,68,68,.25)}}
+#send{background:var(--lime);color:var(--on-lime)}
+#send:disabled{opacity:.4}
+.note{font-size:11.5px;color:var(--txt2);text-align:center;margin-top:7px}
+#sheet{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:flex-end;justify-content:center;z-index:9}
+#sheet .in{background:var(--card);width:100%;max-width:640px;border-radius:22px 22px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom))}
+#sheet h3{margin:0 0 10px}
+#sheet p{color:var(--txt2);font-size:13.5px;line-height:1.45}
+#sheet input{width:100%;background:var(--bg);color:var(--txt);border:1px solid var(--line);border-radius:12px;padding:11px;font:inherit;font-size:14px}
+#sheet .row{display:flex;gap:8px;margin-top:12px}
+#sheet .row button{flex:1;padding:12px;border-radius:14px;font-weight:700;background:var(--card2)}
+#sheet .row button.ok{background:var(--lime);color:var(--on-lime)}
+.sub{margin:14px 0 8px;font-size:13.5px;font-weight:700;color:var(--txt)}
+.chip.mec{border-color:#7C5A1E;background:#2A2416}
+#foto{background:var(--card2);border:1px solid var(--line)}
+#foto.hint{background:var(--lime);color:var(--on-lime);border-color:var(--lime);animation:p 1.2s 3}
+#fmenu{display:none;gap:8px;margin-bottom:8px}#fmenu.on{display:flex}#fmenu button{flex:1;background:var(--card2);border:1px solid var(--lime);border-radius:14px;padding:12px 8px;font-weight:700;font-size:14.5px}
+#fotos{display:none;gap:8px;margin-bottom:8px;align-items:center}
+#fotos.on{display:flex}
+#fotos .th{position:relative;width:58px;height:58px;flex:none}
+#fotos .th img{width:58px;height:58px;object-fit:cover;border-radius:12px;border:1px solid var(--line)}
+#fotos .th button{position:absolute;top:-6px;right:-6px;width:22px;height:22px;border-radius:50%;background:var(--red);color:#fff;font-size:12px;font-weight:800;line-height:22px}
+#fotos small{color:var(--txt2);font-size:12px;line-height:1.3}
+.me .fts{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+.me .fts img{width:64px;height:64px;object-fit:cover;border-radius:10px}
+.grav{display:block;font-weight:800;font-size:14.5px;padding:9px 11px;border-radius:12px;margin-bottom:10px;white-space:normal}
+.grav.VERDE{background:rgba(34,197,94,.15);color:#86EFAC;border:1px solid #22C55E}
+.grav.ÁMBAR{background:rgba(245,158,11,.15);color:#FCD34D;border:1px solid #F59E0B}
+.grav.ROJO{background:rgba(239,68,68,.18);color:#FCA5A5;border:1px solid #EF4444}
+@media (max-height:760px){header h1 small{display:none}.hello p{font-size:13.5px}}
+</style>
+</head>
+<body>
+<header>
+  <a class="back" href="pro.html" aria-label="Volver a VillorvinAdventure">‹</a>
+  <h1>Asistente<small>VillorvinAdventure</small></h1>
+  <span class="beta">BETA</span>
+  <button class="cfg" id="cfgBtn" aria-label="Ajustes">⚙️</button>
+</header>
+
+<div id="loc"><div class="t" id="locT"><b>Sin ubicación</b><br>Actívala para preguntar por sitios cercanos y el tiempo</div><button id="locBtn">📍 Usar ubicación</button></div>
+<details id="near"><summary>Sitios cerca (datos de OpenStreetMap)</summary><ul id="nearL"></ul></details>
+
+<main id="chat">
+  <div class="hello" id="hello">
+    <h2>Hola, ¿en qué te ayudo?</h2>
+    <p>Pregunta por escrito, con el micrófono o con una foto 📷: ciclismo, averías de la bici, dónde comer o parar, qué ver cerca o dudas generales de salud.</p>
+    <div class="chips" id="chips"></div>
+    <p class="sub">🔧 ¿Avería en la bici? Elige, cuéntalo y añade una foto</p>
+    <div class="chips" id="chipsMec"></div>
+    <details class="srcs lee" id="srcs"><summary style="cursor:pointer;font-weight:700">📚 Para saber más: webs de ciclismo recomendadas</summary></details>
+  </div>
+</main>
+
+<a class="gem mini" id="gem" href="https://gemini.google.com/app" target="_blank" rel="noopener"><i>✨</i><div><b>¿Quieres hablar en directo o enseñar algo con la cámara?</b><br>Abre Gemini Live (app de Google, fuera de VillorvinAdventure)</div><span>›</span></a>
+
+<footer>
+  <div class="opts">
+    <button class="tog" id="ttsTog">🔊 Leer respuestas</button>
+    <button class="tog" id="convTog">💬 Modo conversación</button>
+  </div>
+  <div id="fmenu"><button id="fCam">📸 Hacer foto</button><button id="fGal">🖼️ Galería</button></div>
+  <div id="fotos"></div>
+  <div class="bar">
+    <button class="rb" id="foto" aria-label="Añadir foto de la bici">📷</button>
+    <input type="file" id="fotoIn" accept="image/*" multiple hidden>
+    <input type="file" id="camIn" accept="image/*" capture="environment" hidden>
+    <button class="rb" id="mic" aria-label="Hablar">🎙️</button>
+    <textarea id="q" rows="1" placeholder="Escribe tu pregunta…" maxlength="600"></textarea>
+    <button class="rb" id="send" aria-label="Enviar" disabled>➤</button>
+  </div>
+  <div class="note">Beta · La IA puede equivocarse · No sustituye a un médico · Asistencia: <a href="tel:+34610200580">610 200 580</a></div>
+</footer>
+
+<div id="sheet"><div class="in">
+  <h3>Ajustes del asistente</h3>
+  <p>Dirección del servicio de IA (worker de Cloudflare). Solo cámbiala si te lo indican.</p>
+  <input id="urlIn" inputmode="url" autocomplete="off" spellcheck="false">
+  <p id="cnt"></p>
+  <div class="row"><button id="clrBtn">Borrar conversación</button><button class="ok" id="okBtn">Guardar</button></div>
+</div></div>
+
+<script>
+'use strict';
+const WORKER_DEFAULT='https://dawn-bush-f4aa.pedrosaborrego.workers.dev';
+const LIMITE_DIA=40; // preguntas por móvil y día (beta)
+const $=id=>document.getElementById(id);
+const st={get(k,d){try{const v=localStorage.getItem('as_'+k);return v===null?d:JSON.parse(v)}catch(e){return d}},set(k,v){try{localStorage.setItem('as_'+k,JSON.stringify(v))}catch(e){}}};
+let hist=[];            // conversación solo en memoria (no se guarda: privacidad)
+let ctx={lugar:'',tiempo:'',sitios:[],ll:null};
+let busy=false,tts=st.get('tts',true),conv=st.get('conv',false);
+
+/* ---------- Preguntas rápidas ---------- */
+const CHIPS=[['🍽️ ¿Dónde como cerca?','¿Dónde puedo comer o tomar algo cerca de aquí?',true],['💧 Fuente de agua','¿Hay alguna fuente de agua cerca?',true],['🔧 Taller de bicis','¿Hay algún taller o tienda de bicis cerca?',true],['👕 ¿Qué ropa me pongo?','Con el tiempo que hace hoy aquí, ¿qué ropa me pongo para salir en bici?',true],['🛞 Arreglar un pinchazo','Explícame paso a paso cómo arreglar un pinchazo en ruta',false],['🦵 Tengo calambres','Me han dado calambres en las piernas en ruta, ¿qué hago?',false]];
+CHIPS.forEach(([l,q,needLoc])=>{const b=document.createElement('button');b.className='chip';b.textContent=l;b.onclick=async()=>{if(needLoc&&!ctx.ll)await getLoc();ask(q)};$('chips').appendChild(b)});
+
+/* ---------- v1.4: Averías de la bici (botones, fotos y semáforo de gravedad) ---------- */
+let mecChip=false,fotos=[];
+const MAX_FOTOS=3;
+const MEC_CHIPS=[['🛑 Frenos','Avería en los frenos: '],['⛓️ Cadena / cambio','Avería en la cadena o el cambio: '],['🔊 Ruido raro','La bici hace un ruido raro: '],['🎯 Holgura / algo suelto','Noto holgura o algo suelto en la bici: '],['⭕ Rueda / radios','Problema en una rueda o en los radios: '],['⚡ E-Bike','Problema con mi bici eléctrica: ']];
+MEC_CHIPS.forEach(([l,q])=>{const b=document.createElement('button');b.className='chip mec';b.textContent=l;b.onclick=()=>{mecChip=true;const t=$('q');t.value=q;autosize();t.focus();try{t.setSelectionRange(q.length,q.length)}catch(e){}
+  const f=$('foto');f.classList.remove('hint');void f.offsetWidth;f.classList.add('hint')};$('chipsMec').appendChild(b)});
+const MEC=/(aver[ií]a|\bfren|pastillas? de freno|\bdiscos?\b|cadena|desviador|\bcambios?\b|pi[ñn][oó]n|cassette|ruido|cruj|chirr|holgura|suelt|manillar|juego de direcci|\bruedas?\b|\bradios?\b|llanta|\bbuje|\beje\b|cubierta|c[aá]mara de la rueda|pinch|tubeless|v[aá]lvula|\bpedal(es)?\b|biela|tija|horquilla|amortigu|\bcuadro\b|e-?bike|bici el[eé]ctrica|bater[ií]a|\bmotor\b)/i;
+const MEC_INST='[Consulta de avería mecánica de bicicleta. Instrucciones para la IA: empieza tu respuesta SIEMPRE con una primera línea exacta "GRAVEDAD: VERDE" (puede seguir rodando con precaución), "GRAVEDAD: ÁMBAR" (hay que arreglarlo antes de seguir; se puede hacer en ruta) o "GRAVEDAD: ROJO" (no debe seguir rodando; llevarla al taller). Frenos que no frenan bien, dirección o manillar suelto, cuadro u horquilla con grietas, rueda o eje suelto, radios rotos o llanta dañada son siempre ROJO. Ante la duda en algo de seguridad, elige la gravedad más alta. Después da: la causa probable (nunca la des por segura), pasos sencillos numerados para revisarlo o arreglarlo y las herramientas necesarias. Si hay fotos y no se ve bien el problema, pide otra foto más cerca o con más luz. Lenguaje sencillo, para alguien sin experiencia en mecánica.]\n\nPregunta del ciclista: ';
+const GRAV={VERDE:['🟢 Puedes seguir con precaución','Gravedad baja: puedes seguir con precaución'],'ÁMBAR':['🟠 Arréglalo antes de seguir','Gravedad media: arréglalo antes de seguir'],ROJO:['🔴 No sigas rodando · llévala al taller','Gravedad alta: no sigas rodando y llévala al taller']};
+async function shrink(file){const url=URL.createObjectURL(file);try{
+  const img=await new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=url});
+  const M=1024,s=Math.min(1,M/Math.max(img.naturalWidth,img.naturalHeight));const c=document.createElement('canvas');c.width=Math.max(1,Math.round(img.naturalWidth*s));c.height=Math.max(1,Math.round(img.naturalHeight*s));
+  c.getContext('2d').drawImage(img,0,0,c.width,c.height);return c.toDataURL('image/jpeg',0.75)}finally{URL.revokeObjectURL(url)}}
+function renderFotos(){const F=$('fotos');F.innerHTML='';F.classList.toggle('on',fotos.length>0);
+  fotos.forEach((src,i)=>{const d=document.createElement('div');d.className='th';const im=document.createElement('img');im.src=src;im.alt='Foto '+(i+1);
+    const x=document.createElement('button');x.textContent='✕';x.setAttribute('aria-label','Quitar foto');x.onclick=()=>{fotos.splice(i,1);renderFotos();autosize()};d.append(im,x);F.appendChild(d)});
+  if(fotos.length){const sm=document.createElement('small');sm.textContent=fotos.length<MAX_FOTOS?'Cuéntame qué le pasa y envía ➤':'Máximo '+MAX_FOTOS+' fotos';F.appendChild(sm)}}
+$('foto').onclick=()=>{if(fotos.length>=MAX_FOTOS){note('Puedes enviar como máximo '+MAX_FOTOS+' fotos por pregunta.');return}$('fmenu').classList.toggle('on')};
+$('fCam').onclick=()=>{$('fmenu').classList.remove('on');$('camIn').click()};
+$('fGal').onclick=()=>{$('fmenu').classList.remove('on');$('fotoIn').click()};
+$('camIn').onchange=e=>$('fotoIn').onchange(e);
+$('fotoIn').onchange=async e=>{const fs=[...(e.target.files||[])];e.target.value='';
+  for(const f of fs){if(fotos.length>=MAX_FOTOS)break;if(!/^image\//.test(f.type||'image/')){continue}
+    try{fotos.push(await shrink(f))}catch(err){note('No he podido abrir esa foto. Prueba con otra.')}}
+  $('foto').classList.remove('hint');renderFotos();autosize()};
+function sinFotos(m){if(!Array.isArray(m.content))return m;const t=(m.content.find(c=>c.type==='text')||{}).text||'';return {role:m.role,content:'(Envié '+(m.content.length-1)+' foto/s de la bici) '+t}}
+async function llamarIA(msgs){let res=null,err='';
+  try{const r=await fetch(workerUrl(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:msgs,context:contextText()})});
+    let j={};try{j=await r.json()}catch(e){}
+    if(r.ok&&j.text)res=j.text;else err=j.error||('http_'+r.status)}
+  catch(e){err=navigator.onLine?'red':'offline'}
+  return {res,err}}
+
+/* ---------- v1.3: Lecturas recomendadas (enlaces a webs especializadas; no se copia su contenido) ---------- */
+const FUENTES={
+  tmb:{n:'TodoMountainBike · Consejos',d:'Seguridad en el monte, MTB, mantenimiento',u:'https://www.todomountainbike.net/categoria/consejos'},
+  yoc:{n:'YoCiclismo · Entrenamiento',d:'Planes y consejos para entrenar',u:'https://www.yociclismo.com/entrenamiento-ciclista/'},
+  cofE:{n:'Cofidis Likes Ciclismo · Entrenamiento',d:'Entrenar, recuperar y alimentación',u:'https://cofidislikesciclismo.com/consejos/entrenamiento/'},
+  cofM:{n:'Cofidis Likes Ciclismo · Mantenimiento',d:'Cuidar y ajustar tu bici',u:'https://cofidislikesciclismo.com/consejos/mantenimiento/'},
+  bp:{n:'Buen Pedaleo · Trucos de ciclismo',d:'Pedalada, cadencia, cambios y molestias',u:'https://buenpedaleo.com/trucos-ciclista/trucos-de-ciclismo-para-ciclistas/'}
+};
+const TEMAS=[
+  [/(entren|series|forma f[ií]sica|fuerza|resistencia|potencia|vatios|rodillo|plan de|mejorar|subir mejor|puertos?|pulsaciones|ritmo)/i,['yoc','cofE']],
+  [/(cadena|freno|pastilla|cambio|desviador|cassette|pi[ññ]|limpi|engras|lubric|pinchaz|c[aá]mara|cubierta|neum[aá]tic|presi[oó]n|rueda|tubeless|mantenim|ajust)/i,['cofM','bp']],
+  [/(cadencia|pedalad|pedalear|t[eé]cnica|marchas|desarrollo|gafas|empa[ñn]|manos dormid|hormigueo|dolor de (pies|manos|rodilla|espalda)|sill[ií]n|truco)/i,['bp','yoc']],
+  [/(comer en ruta|alimentaci|nutrici|hidrat|beber|gel|barrita|recuper|calambre|pájara|pajara)/i,['cofE','yoc']],
+  [/(mtb|monta[ñn]a|sendero|senda|pista|barro|tormenta|rayo|granizo|perro|noche|r[ií]o|vadear|herido|cobertura|perdid|se[ñn]ales|gr\b|pr\b|e-?bike|el[eé]ctrica)/i,['tmb','bp']]
+];
+function fuentesPara(t){const out=[];for(const [re,ks] of TEMAS){if(re.test(t))for(const k of ks)if(!out.includes(k))out.push(k);if(out.length>=2)break}return out.slice(0,2)}
+function linkFuente(k){const f=FUENTES[k];const a=document.createElement('a');a.href=f.u;a.target='_blank';a.rel='noopener';
+  const sp=document.createElement('span');sp.textContent='📖';const dv=document.createElement('div');dv.textContent=f.n;const sm=document.createElement('small');sm.textContent=f.d;dv.appendChild(sm);a.append(sp,dv);return a}
+Object.keys(FUENTES).forEach(k=>{if(k!=='cofM')$('srcs').appendChild(linkFuente(k))});
+
+/* ---------- Utilidades ---------- */
+function add(cls,text){const d=document.createElement('div');d.className='msg '+cls;d.textContent=text;$('chat').appendChild(d);d.scrollIntoView({behavior:'smooth',block:'end'});return d}
+function note(text){const d=document.createElement('div');d.className='err';d.textContent=text;$('chat').appendChild(d);d.scrollIntoView({behavior:'smooth',block:'end'})}
+function clean(s){return String(s||'').replace(/\*\*|__|`/g,'').replace(/^#+\s*/gm,'').replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}️]/gu,'').trim()}
+function km(m){return m<1000?Math.round(m/10)*10+' m':(m/1000).toFixed(1).replace('.',',')+' km'}
+function dist(a,b){const R=6371e3,r=Math.PI/180,dl=(b.lat-a.lat)*r,dn=(b.lng-a.lng)*r;const x=Math.sin(dl/2)**2+Math.cos(a.lat*r)*Math.cos(b.lat*r)*Math.sin(dn/2)**2;return 2*R*Math.asin(Math.sqrt(x))}
+async function getJSON(u,opt,ms){const ac=new AbortController();const t=setTimeout(()=>ac.abort(),ms||12000);try{const r=await fetch(u,{...(opt||{}),signal:ac.signal});if(!r.ok)throw new Error(r.status);return await r.json()}finally{clearTimeout(t)}}
+
+/* ---------- Ubicación, tiempo y sitios cercanos ---------- */
+const WMO={0:'despejado',1:'casi despejado',2:'parcialmente nuboso',3:'nublado',45:'niebla',48:'niebla',51:'llovizna débil',53:'llovizna',55:'llovizna intensa',61:'lluvia débil',63:'lluvia',65:'lluvia fuerte',71:'nieve débil',73:'nieve',75:'nieve fuerte',80:'chubascos',81:'chubascos',82:'chubascos fuertes',95:'tormenta',96:'tormenta con granizo',99:'tormenta con granizo'};
+const TIPOS={restaurant:'Restaurante',cafe:'Cafetería',bar:'Bar',pub:'Bar',fast_food:'Comida rápida',drinking_water:'Fuente de agua',pharmacy:'Farmacia',hospital:'Hospital',clinic:'Centro de salud',doctors:'Centro médico',fuel:'Gasolinera',toilets:'Aseos',bicycle:'Taller/tienda de bicis',viewpoint:'Mirador',attraction:'Lugar de interés',museum:'Museo',picnic_site:'Zona de picnic',bicycle_repair_station:'Punto de reparación de bicis'};
+async function getLoc(){
+  if(!navigator.geolocation){note('Este móvil no permite la ubicación');return}
+  $('locBtn').textContent='Buscando…';
+  const pos=await new Promise(res=>navigator.geolocation.getCurrentPosition(p=>res(p),()=>res(null),{enableHighAccuracy:true,timeout:15000,maximumAge:60000}));
+  if(!pos){$('locBtn').textContent='📍 Usar ubicación';note('No he podido obtener tu ubicación. Revisa que el GPS y el permiso estén activados.');return}
+  const ll={lat:pos.coords.latitude,lng:pos.coords.longitude};ctx.ll=ll;
+  $('locBtn').textContent='📍 Actualizar';$('locBtn').classList.add('on');
+  $('locT').innerHTML='<b>Cerca de ti</b><br>Cargando el tiempo y los sitios…';
+  const [g,w,o]=await Promise.allSettled([
+    getJSON(`https://nominatim.openstreetmap.org/reverse?format=json&zoom=14&accept-language=es&lat=${ll.lat}&lon=${ll.lng}`),
+    getJSON(`https://api.open-meteo.com/v1/forecast?latitude=${ll.lat.toFixed(3)}&longitude=${ll.lng.toFixed(3)}&current=temperature_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m,wind_gusts_10m&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max,sunset&timezone=auto&forecast_days=1`),
+    overpass(ll)
+  ]);
+  const a=g.status==='fulfilled'&&g.value&&g.value.address||{};
+  ctx.lugar=[...new Set([a.village||a.town||a.city||a.municipality||a.hamlet||'',a.province||a.state||''].filter(Boolean))].join(', ')||'tu zona';
+  if(w.status==='fulfilled'&&w.value&&w.value.current){const c=w.value.current,d=w.value.daily||{};
+    ctx.tiempo=`Ahora ${Math.round(c.temperature_2m)} °C (sensación ${Math.round(c.apparent_temperature)} °C), ${WMO[c.weather_code]||'—'}, viento ${Math.round(c.wind_speed_10m)} km/h con rachas de ${Math.round(c.wind_gusts_10m)} km/h${c.precipitation>0?', lloviendo':''}. Hoy: máxima ${Math.round(d.temperature_2m_max?.[0])} °C, mínima ${Math.round(d.temperature_2m_min?.[0])} °C, probabilidad de lluvia ${d.precipitation_probability_max?.[0]??'?'} %, puesta de sol a las ${(d.sunset?.[0]||'').slice(11,16)}.`}
+  else ctx.tiempo='';
+  ctx.sitios=o.status==='fulfilled'?o.value:[];
+  $('locT').innerHTML='';const b=document.createElement('b');b.textContent=ctx.lugar;$('locT').append(b,document.createElement('br'),document.createTextNode(ctx.tiempo?ctx.tiempo.split('.')[0].replace(/ \(sensación[^)]*\)/,'').replace(/ con rachas de [^,]*/,''):'Sin datos del tiempo ahora'));
+  renderNear();
+}
+function pick(ll,out){
+  out.sort((a,b)=>a.m-b.m);const seen=new Set(),per={},sel=[];
+  for(const s of out){const key=s.tipo+'|'+(s.nombre||Math.round(s.lat*1e4)+','+Math.round(s.lng*1e4));if(seen.has(key))continue;seen.add(key);
+    per[s.tipo]=(per[s.tipo]||0)+1;if(per[s.tipo]<=6)sel.push(s);if(sel.length>=35)break}
+  return sel}
+async function overpass(ll){
+  const A=`(around:1800,${ll.lat.toFixed(5)},${ll.lng.toFixed(5)})`;
+  const q=`[out:json][timeout:20];(nwr${A}[amenity~"^(restaurant|cafe|bar|pub|fast_food|drinking_water|pharmacy|hospital|clinic|fuel|bicycle_repair_station)$"];nwr${A}[shop=bicycle];nwr${A}[tourism~"^(viewpoint|attraction|museum)$"];);out center tags 120;`;
+  const one=async u=>{const j=await getJSON(u,{method:'POST',body:'data='+encodeURIComponent(q),headers:{'Content-Type':'application/x-www-form-urlencoded'}},15000);
+    if(!j||!Array.isArray(j.elements))throw new Error('vacío');
+    const out=[];for(const e of j.elements){const t=e.tags||{};const p={lat:e.lat??e.center?.lat,lng:e.lon??e.center?.lon};if(p.lat==null)continue;
+      const k=t.shop==='bicycle'?'bicycle':(t.amenity||t.tourism);const tipo=TIPOS[k];if(!tipo)continue;
+      if(!t.name&&!['drinking_water','viewpoint','bicycle_repair_station'].includes(k))continue;
+      out.push({tipo,nombre:t.name||'',m:dist(ll,p),lat:p.lat,lng:p.lng,horario:t.opening_hours||'',cocina:t.cuisine||''})}
+    return pick(ll,out)};
+  // v1.1: dos servidores a la vez; gana el primero que responda
+  const grupos=[['https://overpass-api.de/api/interpreter','https://overpass.kumi.systems/api/interpreter'],['https://overpass.private.coffee/api/interpreter','https://maps.mail.ru/osm/tools/overpass/api/interpreter']];
+  for(const g of grupos){try{const r=await Promise.any(g.map(one));if(r.length)return r}catch(e){}}
+  // Respaldo: buscador de OpenStreetMap (Nominatim), solo comer/beber y talleres
+  try{return await nominatimNear(ll)}catch(e){return []}
+}
+async function nominatimNear(ll){
+  const d=0.03,vb=[ll.lng-d,ll.lat+d,ll.lng+d,ll.lat-d].map(x=>x.toFixed(4)).join(',');
+  const out=[];
+  for(const [q,k] of [['restaurant','restaurant'],['cafe','cafe'],['bar','bar'],['bicycle shop','bicycle']]){
+    try{const j=await getJSON(`https://nominatim.openstreetmap.org/search?format=jsonv2&amenity=${encodeURIComponent(q)}&viewbox=${vb}&bounded=1&limit=12&extratags=1&accept-language=es`,null,10000);
+      for(const e of j||[]){const p={lat:+e.lat,lng:+e.lon};const nm=e.name||(e.display_name||'').split(',')[0];if(!nm)continue;
+        out.push({tipo:TIPOS[k],nombre:nm,m:dist(ll,p),lat:p.lat,lng:p.lng,horario:(e.extratags&&e.extratags.opening_hours)||'',cocina:(e.extratags&&e.extratags.cuisine)||''})}}catch(e){}
+    await new Promise(r=>setTimeout(r,1100)); // norma de uso de Nominatim: 1 petición por segundo
+  }
+  return pick(ll,out);
+}
+function renderNear(){
+  const L=$('nearL');L.innerHTML='';
+  $('near').style.display='block';
+  if(!ctx.sitios.length){$('near').querySelector('summary').textContent='Sitios cerca: no he podido cargarlos (toca Actualizar)';return}
+  $('near').querySelector('summary').textContent=`Sitios cerca (${ctx.sitios.length}) · datos de OpenStreetMap`;
+  for(const s of ctx.sitios.slice(0,25)){const li=document.createElement('li');const sp=document.createElement('span');sp.textContent=(s.nombre?s.nombre+' · ':'')+s.tipo+' ';const sm=document.createElement('small');sm.textContent=km(s.m);sp.appendChild(sm);
+    const a=document.createElement('a');a.href=`https://www.google.com/maps/search/?api=1&query=${s.lat},${s.lng}`;a.target='_blank';a.rel='noopener';a.textContent='Ver en Maps';li.append(sp,a);L.appendChild(li)}
+}
+function contextText(){
+  const now=new Date();const dia=now.toLocaleDateString('es-ES',{weekday:'long'});
+  let s=`IMPORTANTE: la app se llama VillorvinAdventure (comunidad de rutas en bici y aventura de VillorvinAdventure, Sant Guim de Freixenet, Lleida; lema «Passion led us here»; web villorvinadventure.com). Preséntate siempre como el Asistente de VillorvinAdventure y no menciones nunca otro nombre de app. Para emergencias, averías o asistencia en ruta, el teléfono es el de la Asistencia VillorvinAdventure: 610 200 580.\nFecha y hora local: ${dia} ${now.toLocaleDateString('es-ES')} ${now.toTimeString().slice(0,5)}.\n`;
+  if(!ctx.ll)return s+'El usuario NO ha activado la ubicación.';
+  s+=`Ubicación aproximada: ${ctx.lugar}.\n`;
+  if(ctx.tiempo)s+=`Tiempo: ${ctx.tiempo}\n`;
+  if(ctx.sitios.length){s+='Sitios cercanos (OpenStreetMap, distancia en línea recta; puede faltar información y los horarios pueden no estar actualizados):\n';
+    for(const x of ctx.sitios)s+=`- ${x.tipo}${x.nombre?' «'+x.nombre+'»':''} a ${km(x.m)}${x.cocina?', cocina: '+x.cocina:''}${x.horario?', horario: '+x.horario:''}\n`}
+  else s+='No hay datos de sitios cercanos ahora mismo.\n';
+  return s;
+}
+
+/* ---------- Seguridad: emergencias y salud ---------- */
+const EMERG=/(dolor (en|de)l? pecho|dolor fuerte en el pecho|no puedo respirar|me ahogo|ahog[aá]ndo|perd(i|í|ió|io) el conocimiento|desmay|inconsciente|no responde|sangr\w* mucho|hemorragia|golpe (fuerte )?en la cabeza|me he dado en la cabeza|se ha dado en la cabeza|no siento (el|la|los|las|un)|paraliz|no puedo mover|infarto|ictus|convulsi|atropell|accidente grave|golpe de calor|hueso (roto|fuera)|fractura abierta|quiero morir|suicid)/i;
+const SALUD=/(dolor|duele|calambre|mareo|mareado|mareada|fiebre|herida|sangr|golpe|ca[ií]da|me ca[ií]|tobillo|rodilla|espalda|corazón|pulso|tensión|azúcar|diabet|alerg|picadura|medicament|pastilla|ibuprofeno|paracetamol|lesión|torcedura|esguince|vómit|náusea|deshidrat|insolación|quemadura|asma)/i;
+const AVISO='Esto no sustituye la opinión de un médico.';
+function showSOS(){
+  const d=document.createElement('div');d.className='sos';
+  d.innerHTML='<h3>⚠️ Puede ser una emergencia</h3><p>Si la persona está mal o no estás seguro, llama ya a la Asistencia VillorvinAdventure (610 200 580). Diles dónde estás. Mientras, no la muevas si se ha golpeado la cabeza o la espalda.</p><a href="tel:+34610200580">📞 Llamar a Asistencia</a>';
+  $('chat').appendChild(d);d.scrollIntoView({behavior:'smooth',block:'end'});
+  if(tts)speak('Puede ser una emergencia. Si la persona está mal, llama ya al uno uno dos.');
+}
+
+/* ---------- Preguntar a la IA ---------- */
+function workerUrl(){return st.get('url','')||WORKER_DEFAULT}
+function usoHoy(){const d=new Date().toISOString().slice(0,10);const u=st.get('uso',{d,n:0});return u.d===d?u:{d,n:0}}
+async function ask(text){
+  text=String(text||'').trim();if(busy)return;
+  const fotosEnv=fotos.slice();if(!text&&fotosEnv.length)text='¿Qué le pasa a mi bici? Te mando una foto.';if(!text)return;
+  const esMec=fotosEnv.length>0||mecChip||MEC.test(text);mecChip=false;
+  fotos=[];renderFotos();$('foto').classList.remove('hint');
+  $('hello')&&$('hello').remove();['gem','loc','near'].forEach(i=>$(i).classList.add('mini'));document.querySelector('header').classList.add('mini');
+  stopSpeak();const meD=add('me',text);$('q').value='';autosize();
+  if(fotosEnv.length){const fw=document.createElement('div');fw.className='fts';fotosEnv.forEach(s=>{const im=document.createElement('img');im.src=s;im.alt='Foto de la bici';fw.appendChild(im)});meD.appendChild(fw)}
+  const u=usoHoy();if(u.n>=LIMITE_DIA){note(`Has llegado al límite de ${LIMITE_DIA} preguntas de hoy (versión beta). Mañana más.`);return}
+  if(EMERG.test(text))showSOS();
+  if(ctx.ll&&!ctx.sitios.length&&/(comer|como|cenar|desayun|almorz|restaurant|bar|caf[eé]|tapa|bocadillo|fuente|agua|taller|tienda de bici|cerca|visitar|ver )/i.test(text)){
+    $('locT').lastChild&&($('near').querySelector('summary').textContent='Buscando sitios cercanos…');
+    ctx.sitios=await overpass(ctx.ll);renderNear()}
+  const envTxt=esMec?MEC_INST+text:text;
+  hist.push({role:'user',content:fotosEnv.length?[...fotosEnv.map(s=>({type:'image',source:{type:'base64',media_type:'image/jpeg',data:s.split(',')[1]}})),{type:'text',text:envTxt}]:envTxt});
+  busy=true;$('send').disabled=true;
+  const w=document.createElement('div');w.className='msg ai dots';w.innerHTML='<span></span><span></span><span></span>';$('chat').appendChild(w);w.scrollIntoView({behavior:'smooth',block:'end'});
+  const msgs=hist.slice(-8).map((m,i,a)=>i===a.length-1?m:sinFotos(m));
+  let {res,err}=await llamarIA(msgs);
+  let fotoFallo=false;
+  if(!res&&fotosEnv.length&&!['offline','limite_diario','no_permitido'].includes(err)){
+    // Si el servidor no acepta fotos, repetimos solo con el texto
+    hist[hist.length-1]={role:'user',content:envTxt+' (El ciclista intentó enviar una foto pero no se pudo; pídele que describa lo que ve.)'};
+    ({res,err}=await llamarIA(hist.slice(-8).map(sinFotos)));fotoFallo=!!res}
+  if(hist.length&&Array.isArray(hist[hist.length-1].content))hist[hist.length-1]=sinFotos(hist[hist.length-1]);
+  w.remove();busy=false;$('send').disabled=!$('q').value.trim();
+  if(!res){hist.pop();
+    note({offline:'Sin conexión. El asistente necesita internet. Si es una emergencia, llama a la Asistencia: 610 200 580.',limite_diario:'El asistente ha llegado a su límite gratuito de hoy. Vuelve a probar mañana.',no_permitido:'El asistente solo funciona desde la app oficial de VillorvinAdventure.',ia_no_disponible:'La IA no responde ahora mismo. Prueba en un momento.'}[err]||'No he podido conectar con el asistente. Prueba otra vez en un momento.');
+    return}
+  st.set('uso',{d:u.d,n:u.n+1});
+  if(fotoFallo)note('No he podido enviar la foto al asistente. Te respondo solo con lo que has escrito.');
+  let grav=null;const gm=String(res).match(/^\s*[*_#\s]*GRAVEDAD\s*:\s*\**\s*(VERDE|[ÁA]MBAR|ROJO)[^\n]*\n*/i);
+  if(gm){grav=gm[1].toUpperCase().replace('AMBAR','ÁMBAR');res=String(res).slice(gm[0].length)}
+  let out=clean(res);
+  if(SALUD.test(text)&&!out.includes('no sustituye'))out+='\n\n'+AVISO;
+  hist.push({role:'assistant',content:out});
+  const d=add('ai',out);
+  const dice=(grav?GRAV[grav][1]+'. ':'')+out;
+  if(grav){const g=document.createElement('span');g.className='grav '+grav;g.textContent=GRAV[grav][0];d.prepend(g)}
+  const act=document.createElement('div');act.className='act';
+  const b1=document.createElement('button');b1.textContent='🔊 Escuchar';b1.onclick=()=>speak(dice);
+  const b2=document.createElement('button');b2.textContent='📋 Copiar';b2.onclick=()=>{navigator.clipboard&&navigator.clipboard.writeText(out).then(()=>{b2.textContent='✓ Copiado'}).catch(()=>{})};
+  act.append(b1,b2);
+  if(grav&&grav!=='VERDE'){const b3=document.createElement('button');b3.textContent='🔧 Talleres cerca';b3.onclick=async()=>{if(!ctx.ll)await getLoc();if(ctx.ll){$('near').open=true;$('near').scrollIntoView({behavior:'smooth',block:'start'})}};act.appendChild(b3)}
+  d.appendChild(act);
+  const fs=fuentesPara(text);if(fs.length){const lee=document.createElement('div');lee.className='lee';lee.textContent='Para leer más:';fs.forEach(k=>lee.appendChild(linkFuente(k)));d.appendChild(lee)}
+  d.scrollIntoView({behavior:'smooth',block:'end'});
+  if(tts)speak(dice,()=>{if(conv)listen()});else if(conv)listen();
+}
+
+/* ---------- Voz: hablar y escuchar (del propio Chrome, gratis) ---------- */
+let voice=null;
+function pickVoice(){const vs=speechSynthesis.getVoices();voice=vs.find(v=>/^es[-_]ES/i.test(v.lang)&&/google/i.test(v.name))||vs.find(v=>/^es[-_]ES/i.test(v.lang))||vs.find(v=>/^es/i.test(v.lang))||null}
+if('speechSynthesis' in window){pickVoice();speechSynthesis.onvoiceschanged=pickVoice}
+function speak(t,done){if(!('speechSynthesis' in window)){done&&done();return}stopSpeak();
+  const parts=String(t).replace(/\n+/g,'. ').match(/[^.!?]+[.!?]*/g)||[t];let i=0;
+  const next=()=>{if(i>=parts.length){done&&done();return}const u=new SpeechSynthesisUtterance(parts[i++].trim());u.lang='es-ES';if(voice)u.voice=voice;u.rate=1.02;u.onend=next;u.onerror=()=>{};speechSynthesis.speak(u)};next()}
+function stopSpeak(){try{speechSynthesis.cancel()}catch(e){}}
+const SR=window.SpeechRecognition||window.webkitSpeechRecognition;let rec=null,recOn=false;
+function listen(){
+  if(!SR){note('Este navegador no permite dictar por voz. Usa Chrome.');return}
+  if(recOn){rec&&rec.stop();return}
+  stopSpeak();rec=new SR();rec.lang='es-ES';rec.interimResults=true;rec.maxAlternatives=1;rec.continuous=false;
+  let finalTxt='';recOn=true;$('mic').classList.add('rec');$('q').placeholder='Te escucho…';
+  rec.onresult=e=>{let s='';for(const r of e.results){s+=r[0].transcript;if(r.isFinal)finalTxt=s}$('q').value=s;autosize()};
+  rec.onerror=e=>{if(e.error==='not-allowed')note('Permite el micrófono para poder hablar.');else if(e.error==='network')note('Para dictar por voz hace falta internet.')};
+  rec.onend=()=>{recOn=false;$('mic').classList.remove('rec');$('q').placeholder='Escribe tu pregunta…';const t=(finalTxt||$('q').value).trim();if(t)ask(t)};
+  try{rec.start()}catch(e){recOn=false;$('mic').classList.remove('rec')}
+}
+
+/* ---------- Interfaz ---------- */
+function autosize(){const q=$('q');q.style.height='auto';q.style.height=Math.min(q.scrollHeight,120)+'px';$('send').disabled=busy||!(q.value.trim()||fotos.length)}
+$('q').addEventListener('input',autosize);
+$('q').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();ask($('q').value)}});
+$('send').onclick=()=>ask($('q').value);
+$('mic').onclick=listen;
+$('locBtn').onclick=getLoc;
+function setTog(){$('ttsTog').classList.toggle('on',tts);$('convTog').classList.toggle('on',conv)}
+$('ttsTog').onclick=()=>{tts=!tts;st.set('tts',tts);if(!tts)stopSpeak();setTog()};
+$('convTog').onclick=()=>{conv=!conv;st.set('conv',conv);if(conv&&!tts){tts=true;st.set('tts',true)}setTog();if(conv)note('Modo conversación: después de cada respuesta te escucho otra vez. Pulsa el micrófono para parar.')};
+setTog();
+$('cfgBtn').onclick=()=>{$('urlIn').value=workerUrl();const u=usoHoy();$('cnt').textContent=`Preguntas hoy: ${u.n} de ${LIMITE_DIA}.`;$('sheet').style.display='flex'};
+$('sheet').onclick=e=>{if(e.target.id==='sheet')$('sheet').style.display='none'};
+$('okBtn').onclick=()=>{const v=$('urlIn').value.trim();st.set('url',/^https:\/\/[\w.-]+(\/.*)?$/.test(v)&&v!==WORKER_DEFAULT?v:'');$('sheet').style.display='none'};
+$('clrBtn').onclick=()=>{hist=[];fotos=[];renderFotos();autosize();document.querySelectorAll('#chat > :not(#hello)').forEach(e=>e.remove());$('sheet').style.display='none'};
+document.addEventListener('visibilitychange',()=>{if(document.hidden){stopSpeak();rec&&recOn&&rec.stop()}});
+</script>
+</body>
+</html>

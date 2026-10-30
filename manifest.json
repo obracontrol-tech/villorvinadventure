@@ -1,0 +1,33 @@
+{
+  "name": "VillorvinAdventure",
+  "short_name": "Villorvin",
+  "description": "VillorvinAdventure · Passion led us here. Rutas, comunidad y asistencia en ruta.",
+  "id": "./",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#06162E",
+  "theme_color": "#06162E",
+  "lang": "es",
+  "icons": [
+    {
+      "src": "va-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "va-icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "va-icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
