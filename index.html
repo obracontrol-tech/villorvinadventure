@@ -1192,7 +1192,7 @@ button,.btn,.li,.chip,.mini,.lvcatch,[onclick]{touch-action:manipulation;-webkit
   </div>
   <button class="li rs-pro" style="margin-top:14px" onclick="openPro()"><span class="em">⭐</span><div><b>Solicita la Pro de VillorvinAdventure</b><small>Para miembros. Misma cuenta, mismos datos.</small></div></button>
   <div class="shopline" id="shopLine" style="display:none"></div>
-  <p style="color:var(--txt2);font-size:13px;text-align:center;margin-top:20px">VillorvinAdventure Simple · versión 1.0.1 (base 5.19.5)</p>
+  <p style="color:var(--txt2);font-size:13px;text-align:center;margin-top:20px">VillorvinAdventure Simple · versión 3.1 (voz de Google)</p>
 </section>
 
 <!-- ============ BARRA INFERIOR ============ -->
@@ -3068,9 +3068,9 @@ const SPOT_URL='https://open.spotify.com/';
 /* v5.13.4 — Botón para reanudar: abre Spotify (allí pulsas ▶️) y vuelves a VillorvinAdventure */
 /* v5.19.4 — Abrir Spotify activa la voz del móvil solo para esa salida (6 horas), no para siempre.
    Antes se quedaba activada y la navegación hablaba siempre con la voz del móvil. */
-if(store.get('musVozMig',0)!==1){if(store.get('musVoz',false)===true)store.set('musVoz',false);store.set('musVozMig',1)}   // se había quedado activada para siempre
-const musVozOn=()=>{const v=store.get('musVoz',false);return v===true||(typeof v==='number'&&Date.now()<v)};
-function musResume(){if(!musVozOn())store.set('musVoz',Date.now()+6*3600000);window.open(SPOT_URL,'_blank');toast('🎵 Pulsa ▶️ en Spotify y vuelve a VillorvinAdventure')}
+if(store.get('musVozMig',0)!==2){store.set('musVoz',false);store.set('musVozMig',2)}   // v5.21: vuelve la voz de Google para todos   // se había quedado activada para siempre
+const musVozOn=()=>false;   // v5.21: siempre voz de Google (en frases cortas)
+function musResume(){window.open(SPOT_URL,'_blank');toast('🎵 Pulsa ▶️ en Spotify y vuelve a VillorvinAdventure')}
 function musVozSet(on){store.set('musVoz',!!on);toast(on?'🗣️ Voz del móvil: no parará la música':'🗣️ Voz de Google (más natural)')}
 /* ===== v5.17 — 📻 Radio en directo (gratis, sin registro) =====
    Las direcciones de cada emisora se buscan en Radio Browser (directorio libre y abierto de radios).
@@ -3131,7 +3131,7 @@ function renderMusic(){
    <h3 style="font-size:16px;margin:4px 2px 8px">🎧 Tu música de Spotify</h3>
    <small style="display:block;color:var(--txt2);margin:-2px 2px 8px;line-height:1.4">Con Spotify gratis puedes descargar podcasts; las listas de música descargadas necesitan Premium.</small>
    <button class="btn btn-lime" style="width:100%;justify-content:center;min-height:56px;font-size:17px" onclick="musResume()">🟢 Abrir Spotify</button>
-   <div class="set" style="margin-top:12px;flex-wrap:wrap">🗣️ Voz que no para la música <label class="sw"><input type="checkbox" ${vz?'checked':''} onchange="musVozSet(this.checked)"><span></span></label><small style="flex-basis:100%;color:var(--txt2);margin-top:4px;line-height:1.4">Solo para Spotify: usa la voz del móvil para que Android no pare Spotify al hablar. Con tu música del móvil o la radio de VillorvinAdventure se usa siempre la voz de Google, que baja la música sin pararla.</small></div>
+   <p style="margin-top:12px;font-size:13.5px;line-height:1.45;color:var(--txt2)">🗣️ Todos los avisos (navegación, tiempo, viento…) usan la <b style="color:var(--txt)">voz de Google</b>. Hablan en frases cortas para que Spotify, YouTube Music o la radio <b style="color:var(--txt)">bajen el volumen</b> mientras suena el aviso y luego vuelvan solas. Sin internet se usa la voz del móvil.</p>
    <div class="list" style="margin-top:12px">
     <div class="li" style="cursor:default"><span class="em">1️⃣</span><div><b>Pon tu música en Spotify</b><small>Dale a ▶️ y vuelve a VillorvinAdventure. Sigue sonando detrás.</small></div></div>
     <div class="li" style="cursor:default"><span class="em">2️⃣</span><div><b>Si se para, botón 🎵</b><small>En la salida: «⋯» → 🎵 abre Spotify. Pulsas ▶️ y vuelves.</small></div></div>
@@ -6221,7 +6221,7 @@ async function ttsCheck(){
     const m=window.ttsLastErr||String(e&&e.name==='AbortError'?'Tarda demasiado en responder (más de 6 s)':e&&e.message||e);
     let why='';
     if(/API key not valid|API_KEY_INVALID/i.test(m))why='La clave no es válida: revisa que la clave «clave de voz» esté copiada bien en la app.';
-    else if(/referer|referrer/i.test(m))why='La clave no deja usarla desde esta web: en «Restricciones de aplicaciones» añade https://app.ridesafeia.es/*';
+    else if(/referer|referrer/i.test(m))why='La clave no deja usarla desde esta web: en «Restricciones de aplicaciones» añade https://obracontrol-tech.github.io/* y https://app.villorvinadventure.com/*';
     else if(/has not been used|is disabled|SERVICE_DISABLED|not been enabled/i.test(m))why='La API Cloud Text-to-Speech no está activada en el proyecto «velogo».';
     else if(/billing|BILLING/i.test(m))why='El proyecto «velogo» no tiene una cuenta de facturación activa (Google la pide para esta API).';
     else if(/blocked|API_KEY_SERVICE_BLOCKED|not authorized|PERMISSION_DENIED/i.test(m))why='La clave tiene restringidas las API: en «Restricciones de API» marca Cloud Text-to-Speech API.';
@@ -6240,18 +6240,36 @@ async function speak(t){
    Con Spotify (música fuera de la app) sigue valiendo «Voz que no para la música». */
 async function voiceSay(t){
   if(!t)return;
-  const inApp=!!(mus.want&&mus.list.length);
-  const local=!ttsOk()||(musVozOn()&&!inApp);
-  musDuck(Math.max(3200,String(t).length*85)+(local?0:6000));
-  if(local){speakLocal(t);return}
-  try{
-    const src=await ttsGet(t);
-    try{speechSynthesis.cancel()}catch(e){}
-    if(!ttsAudio)ttsAudio=new Audio();
-    if(!ttsAudio._rs){ttsAudio._rs=1;ttsAudio.addEventListener('play',()=>{musVoiceStart();musHold()});ttsAudio.addEventListener('ended',musAfterVoice);ttsAudio.addEventListener('error',musAfterVoice);ttsAudio.addEventListener('pause',()=>{if(!ttsAudio.ended)musAfterVoice()})}
-    ttsAudio.pause();ttsAudio.src=src;
-    await ttsAudio.play();
-  }catch(e){console.warn('Voz Google no disponible, uso la del móvil',e);ttsOff=Date.now()+20000;speakLocal(t)}
+  musDuck(Math.max(3200,String(t).length*85)+6000);
+  if(!ttsOk()){speakLocal(t);return}
+  const parts=ttsChunks(t);const my=++ttsSeq;
+  let srcs;
+  try{srcs=await Promise.all(parts.map(p=>ttsGet(p)))}
+  catch(e){console.warn('Voz Google no disponible, uso la del móvil',e);ttsOff=Date.now()+20000;speakLocal(t);return}
+  try{speechSynthesis.cancel()}catch(e){}
+  if(!ttsAudio)ttsAudio=new Audio();
+  if(!ttsAudio._rs){ttsAudio._rs=1;ttsAudio.addEventListener('play',()=>{musVoiceStart();musHold()});ttsAudio.addEventListener('ended',()=>{if(!ttsAudio._more)musAfterVoice()});ttsAudio.addEventListener('error',musAfterVoice);ttsAudio.addEventListener('pause',()=>{if(!ttsAudio.ended&&!ttsAudio._more)musAfterVoice()})}
+  for(let k=0;k<srcs.length;k++){
+    if(my!==ttsSeq)return;                         // ha llegado otro aviso: manda el nuevo
+    ttsAudio._more=k<srcs.length-1;
+    ttsAudio.pause();ttsAudio.src=srcs[k];
+    try{await ttsAudio.play()}catch(e){ttsAudio._more=false;speakLocal(parts.slice(k).join(' '));return}
+    await new Promise(res=>{const done=()=>{ttsAudio.removeEventListener('ended',done);ttsAudio.removeEventListener('error',done);clearTimeout(tm);res()};const tm=setTimeout(done,9000);ttsAudio.addEventListener('ended',done);ttsAudio.addEventListener('error',done)});
+  }
+  ttsAudio._more=false;
+}
+/* v5.21 — Frases de menos de ~4 segundos: Android trata cada trozo como un aviso corto
+   y BAJA la música de Spotify / YouTube Music / radio en lugar de pararla. */
+let ttsSeq=0;
+function ttsChunks(t){
+  let rest=String(t).replace(/\s+/g,' ').trim();const out=[],MAX=58;
+  while(rest.length>MAX){
+    let cut=-1;
+    for(const re of [/[.!?;:]\s/g,/,\s/g,/\s/g]){let m,best=-1;re.lastIndex=0;while((m=re.exec(rest))&&m.index<MAX){if(m.index>=18)best=m.index+1}if(best>0){cut=best;break}}
+    if(cut<0)cut=MAX;
+    out.push(rest.slice(0,cut).trim());rest=rest.slice(cut).trim();
+  }
+  if(rest)out.push(rest);return out;
 }
 /* ===================================================================
    v5.18 — 🎧 MODO CASCO (casco con altavoces y micrófono, p. ej. Sena)
