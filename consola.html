@@ -130,10 +130,10 @@ const KINDS={news:['🆕','Novedad'],trip:['🧳','Próximo viaje'],promo:['📣
 async function orgPush(col,id){
   try{const idToken=await auth.currentUser.getIdToken();let from=0,sent=0,total=0;
     for(let i=0;i<30;i++){const r=await (await fetch(VA_PUSH_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({idToken,t:'org',col,id,club:S.clubId||'',from})})).json();
-      if(r.error){toast('📲 No se pudo avisar al móvil: '+r.error);return}
+      if(r.error){alert('📲 No se ha podido avisar al móvil.\n\nMotivo: '+r.error+'\n\n(La publicación sí se ha guardado.)');return}
       sent+=r.enviados||0;total=r.total||total;if(!r.next)break;from=r.next;toast('📲 Avisando… '+sent+' de '+total)}
     toast(total?'📲 Aviso enviado a '+sent+' '+(sent===1?'móvil':'móviles'):'📲 Nadie tiene activados los avisos con la app cerrada todavía',4000);
-  }catch(e){console.warn('avisos',e);toast('📲 No se pudo avisar al móvil. Revisa la conexión')}
+  }catch(e){console.warn('avisos',e);alert('📲 No se ha podido avisar al móvil.\n\nMotivo: '+(e&&e.message||e)+'\n\n(La publicación sí se ha guardado.)')}
 }
 
 /* Las tres grupetas de VillorvinAdventure */

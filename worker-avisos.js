@@ -1,9 +1,10 @@
-// VillorvinAdventure — Worker de avisos con la app cerrada (Cloudflare) · v3.4
+// VillorvinAdventure — Worker de avisos con la app cerrada (Cloudflare) · v3.5
 // Nombre del Worker: villorvinadventure-push  →  https://villorvinadventure-push.pedrosaborrego.workers.dev
 // Secretos (Settings → Variables and Secrets), los mismos de siempre:
 //   FIREBASE_SA  = el contenido COMPLETO del archivo JSON de la cuenta de servicio de Firebase
 //   FIREBASE_KEY = la "Browser key" (apiKey) de Firebase: AIzaSy...
 // Disparador programado (Settings → Triggers → Cron Triggers):  */5 * * * *
+// Comprobación (no enseña los secretos): abre en el navegador  …workers.dev/?diag
 //
 // Qué avisos manda (sustituye a las funciones de Firebase, que necesitan el plan Blaze):
 //   sos    → SOS de un ciclista a la organización del club (administradores y capitanes)
@@ -51,7 +52,8 @@ export default {
     };
     const out = (o, s = 200) => new Response(JSON.stringify(o), { status: s, headers: { ...cors, 'Content-Type': 'application/json' } });
     if (req.method === 'OPTIONS') return new Response(null, { headers: cors });
-    if (req.method !== 'POST') return out({ ok: true, info: 'villorvinadventure-push v3.4 activo' });
+    if (req.method === 'GET' && new URL(req.url).searchParams.has('diag')) return out(await diag(env));
+    if (req.method !== 'POST') return out({ ok: true, info: 'villorvinadventure-push v3.5 activo' });
     const C = ctx(env);
     try {
       const b = await req.json();
@@ -400,7 +402,7 @@ async function ack(C, b) {
 let signKey = null;
 async function sign(C, text) {
   if (!signKey) {
-    const raw = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('va-recibos|' + JSON.parse(C.env.FIREBASE_SA).private_key));
+    const raw = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('va-recibos|' + parseSA(C.env).private_key));
     signKey = await crypto.subtle.importKey('raw', raw, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
   }
   const sig = await crypto.subtle.sign('HMAC', signKey, new TextEncoder().encode(text));
@@ -428,11 +430,40 @@ function localNow() {
   return { date: `${a.year}-${a.month}-${a.day}`, tomorrow: `${b.year}-${b.month}-${b.day}`, min: +a.hour * 60 + +a.minute };
 }
 
+// Lee el secreto FIREBASE_SA (el archivo JSON de la cuenta de servicio) y explica qué falla si está mal pegado
+function parseSA(env) {
+  const s = String(env.FIREBASE_SA || '').trim().replace(/^\uFEFF/, '');
+  if (!s) throw fail('Falta el secreto FIREBASE_SA en Cloudflare', 500);
+  let o;
+  try { o = JSON.parse(s); if (typeof o === 'string') o = JSON.parse(o); }
+  catch (e) { throw fail('El secreto FIREBASE_SA está mal pegado (no es el archivo JSON completo): ' + e.message, 500); }
+  if (!o || !o.private_key || !o.client_email) throw fail('El secreto FIREBASE_SA no es una cuenta de servicio (falta private_key o client_email)', 500);
+  return o;
+}
+// ?diag → revisa los secretos y la conexión con Firebase, sin enseñarlos
+async function diag(env) {
+  const r = { worker: 'v3.5' };
+  const k = String(env.FIREBASE_KEY || '');
+  r.FIREBASE_KEY = !k ? 'FALTA' : k.startsWith('AIza') ? 'ok' : 'MAL: tiene que empezar por AIza';
+  let sa = null;
+  try { sa = parseSA(env); r.FIREBASE_SA = 'ok'; r.proyecto_de_la_cuenta = sa.project_id; r.proyecto_correcto = sa.project_id === PROJECT; }
+  catch (e) { r.FIREBASE_SA = 'ERROR: ' + e.message; }
+  if (sa) {
+    try {
+      const C = ctx(env); await C.auth(); r.permiso_google = 'ok';
+      const t = await C.f(`${FS}/va_config/aviso`, { headers: await C.auth() });
+      r.base_de_datos = t.ok || t.status === 404 ? 'ok' : 'ERROR ' + t.status + (t.status === 403 ? ' (la cuenta de servicio no es de este proyecto)' : '');
+    } catch (e) { r.permiso_google = 'ERROR: ' + (e && e.message || e); }
+  }
+  r.todo_bien = r.FIREBASE_KEY === 'ok' && r.FIREBASE_SA === 'ok' && r.proyecto_correcto === true && r.permiso_google === 'ok' && r.base_de_datos === 'ok';
+  return r;
+}
+
 // Token de Google a partir de la cuenta de servicio (JWT firmado con RS256)
 let cache = { t: '', exp: 0 };
 async function googleToken(C) {
   if (cache.t && Date.now() < cache.exp) return cache.t;
-  const sa = JSON.parse(C.env.FIREBASE_SA);
+  const sa = parseSA(C.env);
   const now = Math.floor(Date.now() / 1000);
   const enc = o => b64u(new TextEncoder().encode(JSON.stringify(o)));
   const unsigned = enc({ alg: 'RS256', typ: 'JWT' }) + '.' + enc({
@@ -448,7 +479,7 @@ async function googleToken(C) {
     method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: 'grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Ajwt-bearer&assertion=' + jwt
   }).then(r => r.json());
-  if (!r.access_token) throw new Error('No se pudo obtener el token de Google');
+  if (!r.access_token) throw fail('Google no acepta la cuenta de servicio de FIREBASE_SA (' + (r.error_description || r.error || 'sin detalle') + '). Crea una clave nueva en Firebase → Configuración → Cuentas de servicio', 500);
   cache = { t: r.access_token, exp: Date.now() + 50 * 60 * 1000 };
   return r.access_token;
 }
