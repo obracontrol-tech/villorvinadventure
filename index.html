@@ -2000,7 +2000,7 @@ async function catchAlert(type,text){
   if(!p)return false;
   const now=Date.now();const al={type,t:now,id:uid+'_'+now,...(text?{text:String(text).slice(0,60)}:{})};
   try{
-    await db.collection('rides').doc(rid).collection('live').doc(uid).set({name:myName(),lat:+p[0].toFixed(6),lng:+p[1].toFixed(6),speed:Math.round(live.on?live.speed||0:0),t:now,km:live.on?+live.km.toFixed(2):0,alert:al,...(type==='late'||live.catchTo?{late:true}:{})});
+    await db.collection('rides').doc(rid).collection('live').doc(uid).set({name:myName(),lat:+p[0].toFixed(6),lng:+p[1].toFixed(6),speed:Math.round(live.on?live.speed||0:0),t:now,km:live.on?+live.km.toFixed(2):0,alert:al,...(type==='late'||live.catchTo?{late:true}:{})});pushEv({t:'alert',ride:rid,id:al.id});
   }catch(e){console.warn('aviso',e);return false}
   const msg=type==='join'?'✅ Ya estoy con vosotros':'🚴 '+(text||'Llego tarde, voy para allá');
   db.collection('rides').doc(rid).collection('msgs').add({uid,name:myName(),text:msg,ts:now}).catch(()=>{});
@@ -2029,9 +2029,11 @@ function drawRideMap(r){
   if(!rc&&pts.length>1){const b=new maplibregl.LngLatBounds();pts.forEach(([,ll])=>b.extend([ll.lng,ll.lat]));rideMap.fitBounds(b,{padding:50,maxZoom:16,duration:0})}
   vaMeOn(rideMap);
 }
-function cancelRide(id){
+async function cancelRide(id){
   if(!ready()||!confirm('¿Cancelar esta salida? Se borrará para todos.'))return;
-  db.collection('rides').doc(id).delete().catch(netErr);db.collection('open').doc(id).delete().catch(()=>{});closeSheets();toast('Salida cancelada');
+  const cr=rides.find(x=>x.id===id);closeSheets();
+  if(cr&&names(cr).length>1){toast('Avisando a los apuntados…');await Promise.race([pushEv({t:'can',ride:id}),new Promise(z=>setTimeout(z,8000))])}
+  db.collection('rides').doc(id).delete().catch(netErr);db.collection('open').doc(id).delete().catch(()=>{});toast('Salida cancelada');
 }
 
 /* ===== Crear salida ===== */
@@ -2284,13 +2286,13 @@ function publishRide(){
   if(editingId){
     const id=editingId,old=rides.find(x=>x.id===id);editingId=null;
     const up={...r};['by','byUid','people','createdAt'].forEach(k=>delete up[k]);if(old&&!isOwner(old)){up.group=old.group||null}up.updatedAt=FV.serverTimestamp();
-    db.collection('rides').doc(id).update(up).then(()=>{if(old&&old.byUid===uid&&(up.open||old.open))syncOpen(id,{...old,...up})}).catch(netErr);
+    db.collection('rides').doc(id).update(up).then(()=>{if(old&&old.byUid===uid&&(up.open||old.open))syncOpen(id,{...old,...up});if(old&&names(old).length>1&&(old.date!==r.date||old.hour!==r.hour||old.start!==r.start||old.meet!==r.meet||old.meetHour!==r.meetHour))pushEv({t:'chg',ride:id})}).catch(netErr);
     closeSheets();toast('Cambios guardados');
     const changed=old&&(old.date!==r.date||old.hour!==r.hour||old.start!==r.start||old.meet!==r.meet||old.meetHour!==r.meetHour);
-    setTimeout(()=>{openRide(id);if(changed&&names(old).length>1&&confirm('Has cambiado día, hora o lugar. ¿Avisar a los apuntados por WhatsApp?'))notifyChange(id)},500);
+    setTimeout(()=>{openRide(id);if(changed&&names(old).length>1&&confirm('Has cambiado día, hora o lugar. Los apuntados reciben un aviso en el móvil. ¿Avisar también por WhatsApp?'))notifyChange(id)},500);
     return;
   }
-  ref.set(r).then(()=>{if(r.open)syncOpen(ref.id,r)}).catch(netErr);
+  ref.set(r).then(()=>{if(r.open)syncOpen(ref.id,r);if(r.group)pushEv({t:'new',ride:ref.id})}).catch(netErr);
   addPoints(20,{created:FV.increment(1)});
   go('comunidad');closeSheets();
   setTimeout(()=>openRide(ref.id),350);
@@ -4584,7 +4586,7 @@ async function sendAlert(kind,btext){
   const p=me||prev;if(!p){toast('Esperando señal GPS… inténtalo en unos segundos');return}
   const now=Date.now();const al={type:kind,t:now,id:uid+'_'+now,...(btext?{text:String(btext).slice(0,60)}:{})};
   live.myAlert=kind==='ok'?null:al;alarmUnlock();
-  db.collection('rides').doc(live.rideId).collection('live').doc(uid).set({name:myName(),lat:+p[0].toFixed(6),lng:+p[1].toFixed(6),speed:Math.round(live.speed||0),t:now,km:+live.km.toFixed(2),alert:al}).catch(netErr);
+  db.collection('rides').doc(live.rideId).collection('live').doc(uid).set({name:myName(),lat:+p[0].toFixed(6),lng:+p[1].toFixed(6),speed:Math.round(live.speed||0),t:now,km:+live.km.toFixed(2),alert:al}).then(((rd,ai)=>()=>pushEv({t:'alert',ride:rd,id:ai}))(live.rideId,al.id)).catch(netErr);
   const bmsg=kind==='boss'&&btext?'📣 Aviso del jefe de ruta: '+btext:ALERTS[kind].msg;
   const text=bmsg+(kind==='boss'?'':' 📍 https://maps.google.com/?q='+p[0].toFixed(5)+','+p[1].toFixed(5));
   db.collection('rides').doc(live.rideId).collection('msgs').add({uid,name:myName(),text,ts:now}).catch(()=>{});
@@ -7639,6 +7641,14 @@ async function vaPush(C,mid){
   try{const u=firebase.auth().currentUser;if(!u)return;const idToken=await u.getIdToken();
     const r=await fetch(VA_PUSH_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({idToken,club:C,msg:mid})});
     console.log('VA push',r.status,await r.text().catch(()=>''))}catch(e){console.warn('VA push',e)}
+}
+/* v2.7 — Avisos con la app cerrada sin funciones de Firebase: salida nueva, cambio, cancelación y avisos en ruta (Worker v3) */
+async function pushEv(b){
+  try{const u=firebase.auth().currentUser;if(!u)return;const idToken=await u.getIdToken();let from=0;
+    for(let i=0;i<10;i++){const ac=new AbortController();const tt=setTimeout(()=>ac.abort(),12000);
+      let r=null;try{r=await (await fetch(VA_PUSH_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({idToken,...b,from}),signal:ac.signal})).json()}finally{clearTimeout(tt)}
+      if(!r||!r.next)break;from=r.next}
+  }catch(e){console.warn('avisos',e)}
 }
 function vaCall(k){const a=vaAl[k];if(a&&a.tel)location.href='tel:+'+telNorm(a.tel)}
 /* Ficha del ciclista para la consola de VillorvinAdventure (va_members/{uid}) */
