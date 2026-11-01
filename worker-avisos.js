@@ -1,4 +1,4 @@
-// VillorvinAdventure — Worker de avisos con la app cerrada (Cloudflare) · v3.0
+// VillorvinAdventure — Worker de avisos con la app cerrada (Cloudflare) · v3.1
 // Nombre del Worker: villorvinadventure-push  →  https://villorvinadventure-push.pedrosaborrego.workers.dev
 // Secretos (Settings → Variables and Secrets), los mismos de siempre:
 //   FIREBASE_SA  = el contenido COMPLETO del archivo JSON de la cuenta de servicio de Firebase
@@ -18,7 +18,8 @@
 // el aviso se manda por tandas (la app pide la siguiente tanda; los recordatorios siguen en el próximo turno).
 
 const PROJECT = 'villorvinadventure-38c74';
-const ORIGINS = ['https://app.villorvinadventure.com'];
+// v3.1: también la dirección de GitHub Pages (mientras no esté activo el dominio propio)
+const ORIGINS = ['https://app.villorvinadventure.com', 'https://obracontrol-tech.github.io'];
 const TZ = 'Europe/Madrid';
 const DOCS = `projects/${PROJECT}/databases/(default)/documents`;
 const FS = `https://firestore.googleapis.com/v1/${DOCS}`;
@@ -43,7 +44,7 @@ export default {
     };
     const out = (o, s = 200) => new Response(JSON.stringify(o), { status: s, headers: { ...cors, 'Content-Type': 'application/json' } });
     if (req.method === 'OPTIONS') return new Response(null, { headers: cors });
-    if (req.method !== 'POST') return out({ ok: true, info: 'villorvinadventure-push v3.0 activo' });
+    if (req.method !== 'POST') return out({ ok: true, info: 'villorvinadventure-push v3.1 activo' });
     const C = ctx(env);
     try {
       const b = await req.json();
