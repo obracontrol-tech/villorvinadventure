@@ -1,4 +1,4 @@
-// VillorvinAdventure — Worker de avisos con la app cerrada (Cloudflare) · v3.1
+// VillorvinAdventure — Worker de avisos con la app cerrada (Cloudflare) · v3.2
 // Nombre del Worker: villorvinadventure-push  →  https://villorvinadventure-push.pedrosaborrego.workers.dev
 // Secretos (Settings → Variables and Secrets), los mismos de siempre:
 //   FIREBASE_SA  = el contenido COMPLETO del archivo JSON de la cuenta de servicio de Firebase
@@ -11,6 +11,7 @@
 //   chg    → cambio de día, hora o lugar a los apuntados
 //   can    → salida cancelada a los apuntados
 //   alert  → avisos en ruta (pinchazo, esperad, ayuda, caída, perdido…) a los apuntados
+//   test   → prueba: el ciclista se manda un aviso a sí mismo a los 10 segundos (1 por minuto)
 //   cron   → recordatorio la víspera (desde las 20:00) y 1 hora antes, a los apuntados
 // Seguridad: cada aviso se comprueba en la base de datos (quién lo pide, que es suyo y que es reciente)
 // y no se puede repetir para llenar de avisos los móviles del club.
@@ -34,7 +35,7 @@ const ALERTS = {
 const URGENT = ['help', 'fall', 'lost'];
 
 export default {
-  async fetch(req, env) {
+  async fetch(req, env, ctxCf) {
     const origin = req.headers.get('Origin') || '';
     const cors = {
       'Access-Control-Allow-Origin': ORIGINS.includes(origin) ? origin : ORIGINS[0],
@@ -44,7 +45,7 @@ export default {
     };
     const out = (o, s = 200) => new Response(JSON.stringify(o), { status: s, headers: { ...cors, 'Content-Type': 'application/json' } });
     if (req.method === 'OPTIONS') return new Response(null, { headers: cors });
-    if (req.method !== 'POST') return out({ ok: true, info: 'villorvinadventure-push v3.1 activo' });
+    if (req.method !== 'POST') return out({ ok: true, info: 'villorvinadventure-push v3.2 activo' });
     const C = ctx(env);
     try {
       const b = await req.json();
@@ -53,6 +54,7 @@ export default {
       if (!uid) return out({ error: 'auth' }, 401);
       const t = b.t || 'sos';
       if (t === 'sos') return out(await sos(C, uid, b));
+      if (t === 'test') return out(await selfTest(C, uid, ctxCf));
       if (!/^[A-Za-z0-9]{20}$/.test(b.ride || '')) return out({ error: 'datos' }, 400);
       const from = Math.max(0, Math.min(5000, parseInt(b.from, 10) || 0));
       if (t === 'new' || t === 'chg' || t === 'can') return out(await rideEvent(C, uid, t, b.ride, from));
@@ -113,6 +115,19 @@ async function sos(C, uid, { club, msg }) {
   const body = (tel ? 'Tel. ' + tel.trim() + '. ' : '') + 'Toca para ver dónde está y gestionarlo.';
   const r = await sendAll(C, tokens, 0, { title: 'SOS VillorvinAdventure · ' + name + ': ' + kind, body, url: './', urgent: '1', tag: 'va-sos' });
   return { ok: true, enviados: r.sent, next: r.next };
+}
+
+/* ---------------- Prueba: aviso a uno mismo a los 10 segundos (máx. 1 por minuto) ---------------- */
+async function selfTest(C, uid, ctxCf) {
+  const p = await C.get(`users/${uid}/private/push`);
+  if (!p) return { ok: true, total: 0 };
+  if (Date.now() - num(p.lastTest) < 60 * 1000) return { ok: true, espera: true, total: keys(p.tokens).length };
+  await C.patch(`users/${uid}/private/push`, { lastTest: { integerValue: String(Date.now()) } }, ['lastTest']);
+  const tokens = keys(p.tokens).map(t => ({ u: uid, t }));
+  if (tokens.length) ctxCf.waitUntil(new Promise(r => setTimeout(r, 10000)).then(() => sendAll(C, tokens.slice(0, 10), 0, {
+    title: 'Prueba de VillorvinAdventure', body: '¡Funciona! Te llegarán los avisos de tu club aunque la app esté cerrada.', url: './', urgent: '0', tag: 'va-test'
+  })).catch(() => {}));
+  return { ok: true, total: tokens.length };
 }
 
 /* ---------------- Salida nueva, cambio o cancelación ---------------- */
