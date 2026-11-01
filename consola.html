@@ -213,7 +213,9 @@ async function cicDel(id){
 }
 function csv(){
   const q=v=>'"'+String(v??'').replace(/"/g,'""')+'"';
-  const rows=[['Ciclista','Móvil','App','Grupetas','Alta / último cambio']].concat(S.members.map(x=>[x.name,x.tel,x.app==='pro'?'Pro':'Simple',memberGps(x.id).join(' / '),fmt(x.t)]));
+  // v2.6: un nombre que empiece por = + - @ no se ejecuta como fórmula al abrirlo en Excel
+  const tx=v=>{const s=String(v??'');return /^[=+\-@\t\r]/.test(s)?"'"+s:s};
+  const rows=[['Ciclista','Móvil','App','Grupetas','Alta / último cambio']].concat(S.members.map(x=>[tx(x.name),x.tel,x.app==='pro'?'Pro':'Simple',tx(memberGps(x.id).join(' / ')),fmt(x.t)]));
   download('ciclistas-villorvinadventure.csv','﻿'+rows.map(r=>r.map(q).join(';')).join('\n'),'text/csv;charset=utf-8');
 }
 
