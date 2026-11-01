@@ -139,7 +139,7 @@ async function orgPush(col,id){
 /* Las tres grupetas de VillorvinAdventure */
 const VA_GPS=[['Rutas del club','Carretera','Medio'],['Salida libre','Mixta','Tranquilo'],['Family Members','Mixta','Medio']];
 
-const S={tab:'ciclistas',members:[],rutas:[],news:[],support:[],aviso:null,club:null,clubId:null,isAdm:false,subs:[],editRuta:null};
+const S={tab:'ciclistas',push:[],members:[],rutas:[],news:[],support:[],aviso:null,club:null,clubId:null,isAdm:false,subs:[],editRuta:null};
 
 /* ---------- Acceso ---------- */
 function gate(msg,showIn,showOut){$('gate').style.display='grid';$('app').style.display='none';$('gMsg').innerHTML=msg;$('gBtn').style.display=showIn?'flex':'none';$('gOut').style.display=showOut?'flex':'none'}
@@ -155,6 +155,7 @@ auth.onAuthStateChanged(async u=>{
     $('gate').style.display='none';$('app').style.display='block';render();
   },e=>{console.warn(e);gate('🔒 <b>Acceso restringido.</b><br>Esta cuenta no tiene permiso para la consola de VillorvinAdventure.',false,true)}));
   S.subs.push(db.collection('va_rutas').onSnapshot(s=>{S.rutas=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.t||0)-(a.t||0));render()},e=>console.warn('rutas',e)));
+  S.subs.push(db.collection('va_push').orderBy('t','desc').limit(30).onSnapshot(s=>{S.push=s.docs.map(d=>({id:d.id,...d.data()}));render()},e=>console.warn('avisos',e)));
   S.subs.push(db.collection('va_news').onSnapshot(s=>{S.news=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.t||0)-(a.t||0));render()},e=>console.warn('news',e)));
   S.subs.push(db.collection('va_support').onSnapshot(s=>{S.support=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.t||0)-(a.t||0));render()},e=>console.warn('support',e)));
   S.subs.push(db.collection('va_config').doc('aviso').onSnapshot(s=>{S.aviso=s.exists?s.data():null;render()},e=>console.warn('aviso',e)));
@@ -187,6 +188,22 @@ const gpList=()=>Object.entries((S.club&&S.club.grupetas)||{}).map(([id,g])=>({i
 const gpName=id=>((S.club&&S.club.grupetas)||{})[id]?.name||'';
 const memberGps=uid=>(((S.club&&S.club.gm)||{})[uid]||[]).map(gpName).filter(Boolean);
 
+/* ---------- 📲 Avisos enviados, recibidos y vistos (v3.0) ---------- */
+const nk=m=>Object.keys(m||{}).length;
+const PKIND={news:'🆕 Novedad',trip:'🧳 Próximo viaje',promo:'📣 Publicidad',aviso:'📣 Aviso general',reply:'❓ Respuesta'};
+function pushTable(){
+  if(!S.push.length)return `<div class="box"><h2>📲 Últimos avisos al móvil</h2><p class="hint">Aquí verás, de cada aviso que mandes desde la consola, a cuántos ciclistas se ha enviado, a cuántos les ha llegado al móvil y cuántos lo han visto.</p></div>`;
+  return `<div class="box"><h2>📲 Últimos avisos al móvil</h2><p class="hint">📤 enviados · 📱 han llegado al móvil · 👁️ lo han visto. Si a alguien solo le sale 📤, a su móvil no le llegan los avisos: que revise los permisos de notificaciones.</p>
+   <div class="tbl" style="margin-top:8px"><table><thead><tr><th>Aviso</th><th>Tipo</th><th>Fecha</th><th>📤 Enviados</th><th>📱 Recibidos</th><th>👁️ Vistos</th></tr></thead><tbody>${S.push.slice(0,8).map(p=>{const s=nk(p.sent),r=nk(p.recv),v=nk(p.seen);const pc=n=>s?` <span class="hint">(${Math.round(n*100/s)}%)</span>`:'';
+     return `<tr><td><b>${esc(p.title||'Aviso')}</b></td><td>${esc(PKIND[p.kind]||'Aviso')}</td><td>${fmt(p.t)}</td><td>${s}</td><td>${r}${pc(r)}</td><td>${v}${pc(v)}</td></tr>`}).join('')}</tbody></table></div></div>`;
+}
+// Estado del último aviso que le hemos mandado a este ciclista
+function pushState(id){
+  const p=S.push.find(x=>(x.sent||{})[id]||(x.seen||{})[id]);if(!p)return '<span style="color:var(--txt2)">—</span>';
+  const st=(p.seen||{})[id]?['👁️ Visto',(p.seen||{})[id]]:(p.recv||{})[id]?['📱 Recibido',(p.recv||{})[id]]:['📤 Enviado',(p.sent||{})[id]];
+  return `<b>${st[0]}</b><div class="hint">${esc(String(p.title||'').slice(0,28))} · ${fmt(st[1])}</div>`;
+}
+
 /* ---------- 👥 Ciclistas ---------- */
 function vCiclistas(){
   const q=(($('rq')||{}).value||'').trim().toLowerCase();const wk=Date.now()-7*864e5;const L=S.members;
@@ -197,7 +214,8 @@ function vCiclistas(){
     <div class="stat"><b>${L.filter(x=>x.app!=='pro').length}</b><span>En la Simple</span></div>
     <div class="stat"><b>${L.filter(x=>(x.t||0)>wk).length}</b><span>Nuevos esta semana</span></div></div>
   <div class="bar"><label for="rq" style="position:absolute;left:-9999px">Buscar ciclista</label><input class="inp" id="rq" type="search" placeholder="Buscar por nombre o móvil…" oninput="$('rbody').innerHTML=rowsCic()"><button class="btn" onclick="csv()">⬇️ Descargar lista (Excel)</button></div>
-  <div class="tbl"><table><thead><tr><th>Ciclista</th><th>Móvil</th><th>App</th><th>Grupetas</th><th>Alta / último cambio</th><th>Contactar</th></tr></thead><tbody id="rbody">${rowsCic(v)}</tbody></table></div>`;
+  ${pushTable()}
+  <div class="tbl"><table><thead><tr><th>Ciclista</th><th>Móvil</th><th>App</th><th>Grupetas</th><th>Alta / último cambio</th><th>Último aviso</th><th>Contactar</th></tr></thead><tbody id="rbody">${rowsCic(v)}</tbody></table></div>`;
 }
 function rowsCic(v){
   if(!v){const q=(($('rq')||{}).value||'').trim().toLowerCase();v=S.members.filter(x=>!q||String(x.name||'').toLowerCase().includes(q)||String(x.tel||'').replace(/\s/g,'').includes(q.replace(/\s/g,'')))}
@@ -206,8 +224,9 @@ function rowsCic(v){
     <td><span class="tag ${x.app==='pro'?'pro':'simple'}">${x.app==='pro'?'PRO':'SIMPLE'}</span></td>
     <td>${g.length?g.map(n=>`<span class="tag gp">${esc(n)}</span>`).join(''):'<span style="color:var(--txt2)">—</span>'}</td>
     <td>${fmt(x.t)}</td>
+    <td>${pushState(x.id)}</td>
     <td><div class="acts">${n?`<a class="btn sm" href="tel:+${n}">📞 Llamar</a><a class="btn sm" href="https://wa.me/${n}" target="_blank" rel="noopener">💬 WhatsApp</a>`:''}<button class="btn sm red" onclick="cicDel(${jsq(x.id)})" aria-label="Borrar a ${esc(x.name)}">🗑️ Borrar</button></div></td></tr>`}).join('')
-    :`<tr><td colspan="6" class="empty">${S.members.length?'Ningún ciclista coincide con la búsqueda':'Todavía no hay ciclistas registrados'}</td></tr>`;
+    :`<tr><td colspan="7" class="empty">${S.members.length?'Ningún ciclista coincide con la búsqueda':'Todavía no hay ciclistas registrados'}</td></tr>`;
 }
 async function cicDel(id){
   const x=S.members.find(m=>m.id===id);if(!x)return;

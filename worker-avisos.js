@@ -1,4 +1,4 @@
-// VillorvinAdventure — Worker de avisos con la app cerrada (Cloudflare) · v3.3
+// VillorvinAdventure — Worker de avisos con la app cerrada (Cloudflare) · v3.4
 // Nombre del Worker: villorvinadventure-push  →  https://villorvinadventure-push.pedrosaborrego.workers.dev
 // Secretos (Settings → Variables and Secrets), los mismos de siempre:
 //   FIREBASE_SA  = el contenido COMPLETO del archivo JSON de la cuenta de servicio de Firebase
@@ -14,6 +14,8 @@
 //   test   → prueba: el ciclista se manda un aviso a sí mismo a los 10 segundos (1 por minuto)
 //   org    → desde la consola (solo cuentas de la organización): novedad, próximo viaje, publicidad,
 //            aviso general y respuesta a una consulta. La publicidad solo llega a quien la acepta en Perfil.
+//   ack    → el móvil confirma que le ha llegado un aviso de la organización (firmado: nadie puede inventarlo)
+//            La consola ve en va_push/{aviso}: enviados (sent), recibidos (recv) y vistos (seen, lo marca la app)
 //   cron   → recordatorio la víspera (desde las 20:00) y 1 hora antes, a los apuntados
 // Seguridad: cada aviso se comprueba en la base de datos (quién lo pide, que es suyo y que es reciente)
 // y no se puede repetir para llenar de avisos los móviles del club.
@@ -49,10 +51,11 @@ export default {
     };
     const out = (o, s = 200) => new Response(JSON.stringify(o), { status: s, headers: { ...cors, 'Content-Type': 'application/json' } });
     if (req.method === 'OPTIONS') return new Response(null, { headers: cors });
-    if (req.method !== 'POST') return out({ ok: true, info: 'villorvinadventure-push v3.3 activo' });
+    if (req.method !== 'POST') return out({ ok: true, info: 'villorvinadventure-push v3.4 activo' });
     const C = ctx(env);
     try {
       const b = await req.json();
+      if (b && b.t === 'ack') return out(await ack(C, b));
       if (!b || typeof b.idToken !== 'string') return out({ error: 'datos' }, 400);
       const user = await whoIs(C, b.idToken);
       const uid = user && user.localId;
@@ -164,7 +167,15 @@ async function orgEvent(C, user, b, from) {
     reply: { title: 'VillorvinAdventure ha respondido tu consulta', body: text, url: `./?a=${T}#va=sup` }
   }[kind];
   msg.tag = 'va-org-' + id;
-  const res = await sendAll(C, tokens, from, msg);
+  // Recibo: cada móvil lleva la clave del aviso y su firma, para confirmar que le ha llegado
+  const key = col + '_' + id + (col === 'va_config' ? '_' + ver : '');
+  msg.rec = key;
+  const res = await sendAll(C, tokens, from, msg, 2);
+  const sentF = Object.fromEntries(res.okUids.map(u => [u, { integerValue: String(T) }]));
+  const meta = from === 0 ? { title: { stringValue: kind === 'aviso' ? 'Aviso general' : kind === 'reply' ? 'Respuesta a consulta' : title },
+    kind: { stringValue: kind }, t: { integerValue: String(T) }, total: { integerValue: String(new Set(tokens.map(x => x.u)).size) } } : {};
+  await C.patch(`va_push/${key}`, { ...meta, sent: { mapValue: { fields: sentF } } },
+    [...Object.keys(meta), ...res.okUids.map(u => 'sent.`' + u + '`')]).catch(() => {});
   await C.patch(`${col}/${id}`, { px: { mapValue: { fields: { org: { mapValue: { fields: {
     v: { integerValue: String(ver) }, n: { integerValue: String(res.next) }, t: { integerValue: String(T) }
   } } } } } } }, ['px.org']);
@@ -355,16 +366,18 @@ async function tokensOf(C, uids, onlyPromo) {
 // Manda a partir de «from» con las conexiones que queden; devuelve dónde seguir (0 = terminado)
 async function sendAll(C, tokens, from, msg, keep = 1) {
   let i = from, sent = 0;
+  const okUids = new Set();
   const dead = [];
   const data = { title: String(msg.title).slice(0, 120), body: String(msg.body).slice(0, 240), url: msg.url || './', urgent: msg.urgent || '0', tag: msg.tag || 'villorvin' };
   const H = await C.auth();
   while (i < tokens.length && C.left() > keep) {
     const tk = tokens[i++];
+    const dt = msg.rec ? { ...data, p: msg.rec, u: tk.u, s: await sign(C, msg.rec + '|' + tk.u) } : data;
     const r = await C.f(`https://fcm.googleapis.com/v1/projects/${PROJECT}/messages:send`, {
       method: 'POST', headers: { ...H, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message: { token: tk.t, data, webpush: { headers: { Urgency: 'high', TTL: data.urgent === '1' ? '900' : '3600' } } } })
+      body: JSON.stringify({ message: { token: tk.t, data: dt, webpush: { headers: { Urgency: 'high', TTL: data.urgent === '1' ? '900' : '3600' } } } })
     });
-    if (r.ok) sent++;
+    if (r.ok) { sent++; okUids.add(tk.u); }
     else if (r.status === 404 || r.status === 400) dead.push(tk);
   }
   // Borra los móviles que ya no existen (app desinstalada), si quedan conexiones
@@ -372,7 +385,26 @@ async function sendAll(C, tokens, from, msg, keep = 1) {
     if (C.left() <= keep) break;
     await C.patch(`users/${d.u}/private/push`, {}, ['tokens.`' + d.t.replace(/[`\\]/g, '\\$&') + '`']).catch(() => {});
   }
-  return { sent, next: i < tokens.length ? i : 0 };
+  return { sent, next: i < tokens.length ? i : 0, okUids: [...okUids] };
+}
+
+/* ---------------- Recibos: el móvil confirma que le ha llegado ---------------- */
+async function ack(C, b) {
+  const p = String(b.p || ''), u = String(b.u || ''), s = String(b.s || '');
+  if (!/^[A-Za-z0-9_-]{1,100}$/.test(p) || !/^[A-Za-z0-9]{10,40}$/.test(u)) throw fail('datos', 400);
+  if (s !== await sign(C, p + '|' + u)) throw fail('firma', 403);
+  await C.patch(`va_push/${p}`, { recv: { mapValue: { fields: { [u]: { integerValue: String(Date.now()) } } } } }, ['recv.`' + u + '`']);
+  return { ok: true };
+}
+// Firma corta (HMAC) con una clave sacada de la cuenta de servicio: solo el Worker sabe firmar
+let signKey = null;
+async function sign(C, text) {
+  if (!signKey) {
+    const raw = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('va-recibos|' + JSON.parse(C.env.FIREBASE_SA).private_key));
+    signKey = await crypto.subtle.importKey('raw', raw, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  }
+  const sig = await crypto.subtle.sign('HMAC', signKey, new TextEncoder().encode(text));
+  return b64u(new Uint8Array(sig)).slice(0, 22);
 }
 
 /* ---------------- Utilidades ---------------- */

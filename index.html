@@ -1520,7 +1520,7 @@ function openPro(){openSheet('sh-pro');$('proWa').href='https://wa.me/3461020058
 const proCode=()=>$('proIn').value.trim().toUpperCase().replace(/[^A-Z0-9]/g,'');
 function proCheck(){const ok=proCode().length===6,b=$('proGo');b.disabled=!ok;b.style.opacity=ok?1:.4}
 function goPro(){const c=proCode();if(c.length!==6)return;try{localStorage.setItem('va_modo','pro')}catch(e){}location.href='pro.html#grupo='+c}
-try{if(localStorage.getItem('va_modo')==='pro'&&(!location.hash||/va=/.test(location.hash)))location.replace('pro.html'+location.hash)}catch(e){}
+try{if(localStorage.getItem('va_modo')==='pro'&&(!location.hash||/(^#|&)(va|p)=/.test(location.hash)))location.replace('pro.html'+location.hash)}catch(e){}
 // Los enlaces de club (salidas, grupos, encuestas, chat…) se abren en la versión Pro
 if(/(abiertas|encuestas|chatclub|revisar=|salida=|grupo=)/.test(location.hash))location.replace('pro.html'+location.hash);
 /* ===== Configuración Firebase (proyecto VillorvinAdventure) ===== */
@@ -7645,6 +7645,13 @@ async function vaPush(C,mid){
 }
 /* v2.7 — Avisos con la app cerrada sin funciones de Firebase: salida nueva, cambio, cancelación y avisos en ruta (Worker v3) */
 // v2.8: prueba real desde el servidor (llega a los 10 segundos, con la app cerrada)
+// v3.0: «visto» de los avisos de la organización (lo ve la consola en Ciclistas). Cada ciclista solo marca lo suyo
+function vaSeenKey(k){
+  if(!db||!uid||!/^[A-Za-z0-9_-]{1,100}$/.test(k))return;
+  const D=store.get('vaPSeen',{})||{};if(D[k])return;D[k]=Date.now();
+  store.set('vaPSeen',Object.fromEntries(Object.entries(D).sort((a,b)=>b[1]-a[1]).slice(0,200)));
+  db.collection('va_push').doc(k).update(new firebase.firestore.FieldPath('seen',uid),Date.now()).catch(()=>{});
+}
 // v2.9: ofertas y publicidad solo si el ciclista las acepta (se puede quitar cuando quiera)
 function setPromo(on){
   const sw=$('swPromo');if(!uid||!db){if(sw)sw.checked=!on;toast('Conectando… inténtalo en unos segundos');return}
@@ -7703,7 +7710,7 @@ function vaData(){
     if(VA.sup.some(x=>x.reply&&!x.seen&&!old.has(x.id+x.replyAt))&&old.size+VA.sup.length>0)toast('💬 VillorvinAdventure ha respondido tu consulta',3500);fresh();if($('vaSupL'))vaSupList()},e=>console.warn('VA consultas',e)));
 }
 const vaAvisoOn=()=>!!(VA.aviso&&VA.aviso.active&&VA.aviso.text&&store.get('vaAvisoHide',0)!==VA.aviso.t);
-function vaAvisoHTML(){return `<div class="ann" style="border:2px solid #F59E0B;margin-bottom:10px"><span style="font-size:22px">📣</span><p><b>Aviso de VillorvinAdventure</b><br>${esc(VA.aviso.text)}</p><button class="x" style="width:30px;height:30px;flex-shrink:0" aria-label="Cerrar aviso" onclick="store.set('vaAvisoHide',${+VA.aviso.t||0});renderVA()">✕</button></div>`}
+function vaAvisoHTML(){if(VA.aviso&&VA.aviso.t)vaSeenKey('va_config_aviso_'+VA.aviso.t);return `<div class="ann" style="border:2px solid #F59E0B;margin-bottom:10px"><span style="font-size:22px">📣</span><p><b>Aviso de VillorvinAdventure</b><br>${esc(VA.aviso.text)}</p><button class="x" style="width:30px;height:30px;flex-shrink:0" aria-label="Cerrar aviso" onclick="store.set('vaAvisoHide',${+VA.aviso.t||0});renderVA()">✕</button></div>`}
 function vaBtns(){
   const nR=VA.rutas.filter(r=>vaSee(r.gp)).length,nN=VA.news.filter(n=>vaSee(n.gp)&&(n.t||0)>store.get('vaNewsSeen',0)).length,nS=VA.sup.filter(x=>x.reply&&!x.seen).length;
   const bd=n=>n?` <span style="background:#EF4444;color:#fff;border-radius:99px;padding:1px 8px;font-size:12px">${n}</span>`:'';
@@ -7713,7 +7720,7 @@ function vaBtns(){
    <button class="btn btn-line" onclick="vaSup()">❓ Consultas${bd(nS)}</button></div>`;
 }
 function vaRutas(){
-  const L=VA.rutas.filter(r=>vaSee(r.gp));
+  const L=VA.rutas.filter(r=>vaSee(r.gp));L.slice(0,20).forEach(r=>vaSeenKey('va_rutas_'+r.id));
   $('rideBody').innerHTML=sheetHead('🗺️ Rutas del club')+`<p style="color:var(--txt2);margin:-8px 0 12px">Fichas de VillorvinAdventure: información, PDF y tracks de cada día.</p><div id="vaRutL">`+(L.length?L.map(r=>{
     const days=(r.days||[]).filter(d=>d.title||d.km||d.gpx);const km=days.reduce((s,d)=>s+(parseFloat(String(d.km).replace(',','.'))||0),0);
     return `<div class="plc" style="margin-bottom:12px"><div class="pc-h"><span class="pc-tag">${r.gp?esc(vaGpName(r.gp)||'Club'):'Todos'}</span><b>${esc(r.title)}</b></div>
@@ -7725,11 +7732,12 @@ function vaRutas(){
   openRideId=null;if(!$('sh-ride').classList.contains('show'))openSheet('sh-ride');
 }
 function vaNews(){
-  const L=VA.news.filter(n=>vaSee(n.gp));if(L.length)store.set('vaNewsSeen',Math.max(store.get('vaNewsSeen',0),L[0].t||0));
+  const L=VA.news.filter(n=>vaSee(n.gp));L.slice(0,20).forEach(n=>vaSeenKey('va_news_'+n.id));if(L.length)store.set('vaNewsSeen',Math.max(store.get('vaNewsSeen',0),L[0].t||0));
   $('rideBody').innerHTML=sheetHead('🆕 Novedades')+`<div id="vaNewL">`+(L.length?L.map(n=>`<div class="plc" style="margin-bottom:10px"><div class="pc-h"><span class="pc-tag">${n.kind==='trip'?'🧳 Próximo viaje · ':n.kind==='promo'?'📣 Publicidad · ':''}${new Date(n.t||Date.now()).toLocaleDateString('es-ES')}</span><b>${esc(n.title)}</b></div><p style="font-size:14.5px;line-height:1.45;white-space:pre-line;margin-top:6px">${esc(n.text)}</p>${vaUrl(n.link)?`<a href="${esc(vaUrl(n.link))}" target="_blank" rel="noopener" style="color:var(--lime);font-weight:700;display:inline-block;margin-top:6px">Ver más ›</a>`:''}</div>`).join(''):'<div class="empty">Aún no hay novedades.</div>')+'</div>';
   openRideId=null;if(!$('sh-ride').classList.contains('show'))openSheet('sh-ride');setTimeout(()=>{try{renderVA()}catch(e){}},300);
 }
 function vaSup(){
+  VA.sup.filter(x=>x.reply).slice(0,20).forEach(x=>vaSeenKey('va_support_'+x.id));
   $('rideBody').innerHTML=sheetHead('❓ Consultas')+`<p style="color:var(--txt2);margin:-8px 0 12px">Pregunta a VillorvinAdventure. Te responderán aquí mismo. Para una urgencia en ruta usa 🆘 Alertas de seguridad.</p>
    <label class="l" for="vaSupTx">Tu consulta</label><textarea class="inp" id="vaSupTx" maxlength="1500" rows="4" placeholder="Ej. ¿A qué hora sale la ruta del domingo?" style="width:100%;resize:vertical"></textarea>
    <button class="btn btn-lime" style="margin-top:10px" onclick="vaSupSend()">📤 Enviar consulta</button>
@@ -7762,6 +7770,10 @@ function vaMainWatch(){
   if(vaMainW!=null||!navigator.geolocation)return;
   vaMainW=navigator.geolocation.watchPosition(p=>{if(live.on||!meMarker)return;meMarker.setLngLat([p.coords.longitude,p.coords.latitude])},()=>{},{enableHighAccuracy:false,maximumAge:15000,timeout:30000});
 }
+/* v3.0: aviso tocado → visto (#…p=CLAVE) */
+(function(){const m=/[#&]p=([A-Za-z0-9_-]{1,100})/.exec(location.hash);if(!m)return;const k=m[1];let n=0;
+  if(!/va=/.test(location.hash))history.replaceState(null,'',location.pathname);
+  const t=()=>{if(db&&uid)vaSeenKey(k);else if(n++<40)setTimeout(t,500)};setTimeout(t,600)})();
 /* v2.9: al tocar un aviso de la organización se abre Novedades, Rutas del club o Consultas (#va=nov|rutas|sup) */
 (function(){const m=/va=(nov|rutas|sup)/.exec(location.hash);if(!m)return;history.replaceState(null,'',location.pathname);let n=0;
   const t=()=>{if(VA.on){setTimeout(()=>{try{({nov:vaNews,rutas:vaRutas,sup:vaSup})[m[1]]()}catch(e){}},700)}else if(n++<30)setTimeout(t,500)};setTimeout(t,800)})();

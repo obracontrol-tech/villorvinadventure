@@ -1,5 +1,5 @@
 // VillorvinAdventure — Service Worker (v1.0)
-const CACHE = 'va-v2-9';                 // la app (se renueva con cada versión)
+const CACHE = 'va-v3-0';                 // la app (se renueva con cada versión)
 const MAPS = 'va-offline-map';           // zonas guardadas por el ciclista (no se borran al actualizar)
 const VIEW = 'va-map-view';              // mapa ya visto (se recorta solo)
 const LIBS = 'va-libs';                  // librerías externas (mapa, Firebase, letras)
@@ -67,6 +67,9 @@ self.addEventListener('notificationclick', e => {
   e.notification.close();
   e.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(cs => {
     let url = (e.notification.data && e.notification.data.url) || './';
+    // v3.0: al tocarlo, la app marca el aviso como visto
+    const pk = e.notification.data && e.notification.data.p;
+    if (pk && /^[A-Za-z0-9_-]{1,100}$/.test(pk)) url += (url.includes('#') ? '&' : '#') + 'p=' + pk;
     try { if (new URL(url, self.location).origin !== self.location.origin) url = './'; } catch (_) { url = './'; }
     for (const c of cs) { if ('focus' in c) { if (url !== './' && 'navigate' in c) c.navigate(url).catch(() => {}); return c.focus(); } }
     return self.clients.openWindow(url);
@@ -81,7 +84,10 @@ self.addEventListener('push', e => {
   // v5.14.4: avisos sin emojis (más limpios y algunos relojes no los muestran)
   const noEmo = s => String(s || '').replace(/[\p{Extended_Pictographic}\uFE0F\u200D\u20E3]/gu, '').replace(/\s{2,}/g, ' ').trim();
   const title = noEmo(d.title) || 'VillorvinAdventure';
-  e.waitUntil(self.registration.showNotification(title, {
+  // v3.0: avisos de la organización → el móvil confirma que le ha llegado (recibo firmado por el servidor)
+  const ackP = d.p && d.u && d.s ? fetch('https://villorvinadventure-push.pedrosaborrego.workers.dev', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ t: 'ack', p: d.p, u: d.u, s: d.s }) }).catch(() => {}) : null;
+  e.waitUntil(Promise.all([ackP, self.registration.showNotification(title, {
     body: noEmo(d.body),
     icon: 'va-icon-192.png',
     badge: 'va-icon-192.png',
@@ -91,6 +97,6 @@ self.addEventListener('push', e => {
     renotify: true,
     requireInteraction: urgent,
     vibrate: urgent ? [800, 200, 800, 200, 800, 200, 800] : [200, 100, 200],
-    data: { url: d.url || './' }
-  }));
+    data: { url: d.url || './', p: d.p || '' }
+  })]));
 });
