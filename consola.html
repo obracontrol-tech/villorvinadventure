@@ -124,6 +124,17 @@ const fmtD=t=>t?new Date(t).toLocaleDateString('es-ES',{day:'2-digit',month:'2-d
 let toastT;function toast(m){const t=$('toast');t.textContent=m;t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),2800)}
 const safeUrl=u=>/^https?:\/\//i.test(String(u||'').trim())?String(u).trim():'';
 const newId=p=>p+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+/* v2.9 — Avisos al móvil desde la consola (Worker de avisos). Devuelve a cuántos móviles ha llegado */
+const VA_PUSH_URL='https://villorvinadventure-push.pedrosaborrego.workers.dev';
+const KINDS={news:['🆕','Novedad'],trip:['🧳','Próximo viaje'],promo:['📣','Publicidad']};
+async function orgPush(col,id){
+  try{const idToken=await auth.currentUser.getIdToken();let from=0,sent=0,total=0;
+    for(let i=0;i<30;i++){const r=await (await fetch(VA_PUSH_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({idToken,t:'org',col,id,club:S.clubId||'',from})})).json();
+      if(r.error){toast('📲 No se pudo avisar al móvil: '+r.error);return}
+      sent+=r.enviados||0;total=r.total||total;if(!r.next)break;from=r.next;toast('📲 Avisando… '+sent+' de '+total)}
+    toast(total?'📲 Aviso enviado a '+sent+' '+(sent===1?'móvil':'móviles'):'📲 Nadie tiene activados los avisos con la app cerrada todavía',4000);
+  }catch(e){console.warn('avisos',e);toast('📲 No se pudo avisar al móvil. Revisa la conexión')}
+}
 
 /* Las tres grupetas de VillorvinAdventure */
 const VA_GPS=[['Rutas del club','Carretera','Medio'],['Salida libre','Mixta','Tranquilo'],['Family Members','Mixta','Medio']];
@@ -161,7 +172,7 @@ async function loadClub(myUid){
 }
 
 /* ---------- Pestañas ---------- */
-const TABS=[['ciclistas','👥 Ciclistas'],['grupetas','🏷️ Grupetas'],['rutas','🗺️ Rutas y fichas'],['consultas','❓ Consultas'],['novedades','🆕 Novedades y aviso'],['copias','💾 Copias']];
+const TABS=[['ciclistas','👥 Ciclistas'],['grupetas','🏷️ Grupetas'],['rutas','🗺️ Rutas y fichas'],['consultas','❓ Consultas'],['novedades','🆕 Novedades, viajes y avisos'],['copias','💾 Copias']];
 function go(t){S.tab=t;S.editRuta=null;render();window.scrollTo(0,0)}
 function render(){
   if($('app').style.display!=='block')return;
@@ -169,7 +180,7 @@ function render(){
   $('tabs').innerHTML=TABS.map(([k,t])=>`<button class="tab${S.tab===k?' on':''}" onclick="go('${k}')">${t}${k==='consultas'&&pend?`<span class="dot">${pend}</span>`:''}</button>`).join('');
   const f={ciclistas:vCiclistas,grupetas:vGrupetas,rutas:vRutas,consultas:vConsultas,novedades:vNovedades,copias:vCopias}[S.tab];
   const keep=document.activeElement&&document.activeElement.id&&$('view').contains(document.activeElement)?document.activeElement.id:null;
-  if(keep&&(S.tab==='rutas'&&S.editRuta||['rq','nT','nX','nL','nG','aX','gpNew','rf'].includes(keep)||/^rep_/.test(keep)))return;   // no borrar lo que estás escribiendo
+  if(keep&&(S.tab==='rutas'&&S.editRuta||['rq','nT','nX','nL','nG','nK','nP','aX','aP','gpNew','rf','rPush'].includes(keep)||/^rep_/.test(keep)))return;   // no borrar lo que estás escribiendo
   $('view').innerHTML=f();
 }
 const gpList=()=>Object.entries((S.club&&S.club.grupetas)||{}).map(([id,g])=>({id,...g})).sort((a,b)=>String(a.name).localeCompare(String(b.name)));
@@ -284,6 +295,7 @@ function rutaForm(r){
      ${r.days.length>1?`<button class="btn sm red" onclick="dayDel(${i})" aria-label="Quitar día ${i+1}">✕</button>`:''}</div>
      <input class="inp" id="dG${i}" type="url" style="margin-top:8px" value="${esc(d.gpx||'')}" placeholder="Enlace del track GPX (Drive, Wikiloc, Komoot…)"></div>`).join('')}</div>
    <button class="btn sm" style="margin-top:10px" onclick="dayAdd()">➕ Añadir otro día</button>
+   <label class="l" style="display:flex;gap:8px;align-items:center;cursor:pointer;margin-top:14px"><input type="checkbox" id="rPush"${r.id?'':' checked'}> 📲 Avisar al móvil como «Próximo viaje» (aunque tengan la app cerrada)</label>
    <div class="row" style="margin-top:18px"><button class="btn pri" onclick="rutaSave()">💾 Guardar ruta</button><button class="btn" onclick="S.editRuta=null;render()">Cancelar</button></div></div>`;
 }
 function rutaRead(){const r=S.editRuta;r.title=$('rT').value.trim().slice(0,80);r.date=$('rD').value||'';r.gp=$('rG').value||'';r.info=$('rI').value.trim().slice(0,2000);r.pdf=$('rP').value.trim().slice(0,500);
@@ -295,7 +307,8 @@ async function rutaSave(){
   if(r.pdf&&!safeUrl(r.pdf)){toast('El enlace del PDF tiene que empezar por https://');return}
   if(r.days.some(d=>d.gpx&&!safeUrl(d.gpx))){toast('Los enlaces de los tracks tienen que empezar por https://');return}
   const id=r.id||newId('r');const data={title:r.title,date:r.date,gp:r.gp,info:r.info,pdf:r.pdf,days:r.days.slice(0,14),t:Date.now()};
-  try{await db.collection('va_rutas').doc(id).set(data);S.editRuta=null;toast('✅ Ruta guardada');render()}catch(e){fail(e)}
+  const push=$('rPush')&&$('rPush').checked;
+  try{await db.collection('va_rutas').doc(id).set(data);S.editRuta=null;toast('✅ Ruta guardada');render();if(push)orgPush('va_rutas',id)}catch(e){fail(e)}
 }
 async function rutaDel(id){const r=S.rutas.find(x=>x.id===id);if(!confirm('¿Borrar la ruta «'+(r?r.title:'')+'»?'))return;
   try{await db.collection('va_rutas').doc(id).delete();toast('Ruta borrada')}catch(e){fail(e)}}
@@ -308,12 +321,12 @@ function vConsultas(){
     ${x.reply?`<div class="msg rep"><b>Respuesta (${fmt(x.replyAt)}):</b>\n${esc(x.reply)}</div>`:''}
     <label class="l" for="rep_${esc(x.id)}">${x.reply?'Cambiar la respuesta':'Tu respuesta'}</label><textarea class="inp" id="rep_${esc(x.id)}" maxlength="1500" placeholder="Escribe la respuesta. Le saldrá al ciclista en la app."></textarea>
     <div class="acts" style="margin-top:8px"><button class="btn pri sm" onclick="supReply(${jsq(x.id)})">📤 Responder</button>${n?`<a class="btn sm" href="https://wa.me/${n}" target="_blank" rel="noopener">💬 WhatsApp</a><a class="btn sm" href="tel:+${n}">📞 Llamar</a>`:''}<button class="btn sm red" onclick="supDel(${jsq(x.id)})">🗑️ Borrar</button></div></div>`};
-  return `<div class="box"><h2>Consultas de los ciclistas</h2><p class="hint">Los ciclistas preguntan desde la app («❓ Consultas» en la tarjeta de Inicio). Tu respuesta les aparece en la app.</p></div>
+  return `<div class="box"><h2>Consultas de los ciclistas</h2><p class="hint">Los ciclistas preguntan desde la app («❓ Consultas» en la tarjeta de Inicio). Tu respuesta les aparece en la app y les llega un aviso al móvil.</p></div>
    ${pend.length?`<h3 style="margin:6px 0 10px">Pendientes (${pend.length})</h3>`+pend.map(card).join(''):'<div class="empty">No hay consultas pendientes. 👍</div>'}
    ${done.length?`<h3 style="margin:16px 0 10px">Respondidas (${done.length})</h3>`+done.map(card).join(''):''}`;
 }
 async function supReply(id){const t=($('rep_'+id).value||'').trim().slice(0,1500);if(!t){toast('Escribe la respuesta');return}
-  try{await db.collection('va_support').doc(id).update({reply:t,replyAt:Date.now(),seen:false});toast('✅ Respuesta enviada');$('rep_'+id).value='';render()}catch(e){fail(e)}}
+  try{await db.collection('va_support').doc(id).update({reply:t,replyAt:Date.now(),seen:false});toast('✅ Respuesta enviada');$('rep_'+id).value='';render();orgPush('va_support',id)}catch(e){fail(e)}}
 async function supDel(id){if(!confirm('¿Borrar esta consulta?'))return;try{await db.collection('va_support').doc(id).delete();toast('Consulta borrada')}catch(e){fail(e)}}
 
 /* ---------- 🆕 Novedades y aviso general ---------- */
@@ -322,22 +335,27 @@ function vNovedades(){
   return `<div class="grid2"><div class="box"><h2>📣 Aviso general</h2><p class="hint">Sale arriba del todo en la app de todos los ciclistas hasta que lo quites. Para algo urgente o importante (ej. «Ruta del domingo suspendida por lluvia»).</p>
     ${a&&a.active&&a.text?`<div class="msg" style="border-left:3px solid var(--amber)">${esc(a.text)}<div class="hint">Publicado ${fmt(a.t)}</div></div>`:'<p class="hint" style="margin-top:8px">Ahora no hay ningún aviso publicado.</p>'}
     <label class="l" for="aX">Texto del aviso</label><textarea class="inp" id="aX" maxlength="280" placeholder="Máximo 280 caracteres"></textarea>
+    <label class="l" style="display:flex;gap:8px;align-items:center;cursor:pointer"><input type="checkbox" id="aP" checked> 📲 Avisar también al móvil de todos (aunque tengan la app cerrada)</label>
     <div class="acts" style="margin-top:8px"><button class="btn pri" onclick="avisoSave()">📣 Publicar aviso</button>${a&&a.active?`<button class="btn red" onclick="avisoOff()">Quitar aviso</button>`:''}</div></div>
-   <div class="box"><h2>🆕 Nueva novedad</h2><p class="hint">Las novedades quedan en la app, en «🆕 Novedades», y a los ciclistas les sale un aviso la próxima vez que la abren.</p>
+   <div class="box"><h2>🆕 Nueva publicación</h2><p class="hint">Queda en la app, en «🆕 Novedades». Elige si es una novedad, un próximo viaje o publicidad (ofertas, tienda, patrocinadores).</p>
+    <label class="l" for="nK">Tipo</label><select class="inp" id="nK" onchange="$('nPh').textContent=this.value==='promo'?'La publicidad solo llega a los ciclistas que han aceptado recibir ofertas (en Perfil).':''"><option value="news">🆕 Novedad</option><option value="trip">🧳 Próximo viaje</option><option value="promo">📣 Publicidad / oferta</option></select>
     <label class="l" for="nT">Título</label><input class="inp" id="nT" maxlength="80" placeholder="Ej. Nueva equipación 2027">
     <label class="l" for="nX">Texto</label><textarea class="inp" id="nX" maxlength="1500"></textarea>
     <label class="l" for="nG">¿Para quién?</label><select class="inp" id="nG">${gpOptions('')}</select>
     <label class="l" for="nL">Enlace (opcional)</label><input class="inp" id="nL" type="url" placeholder="https://www.villorvinadventure.com/comunidad/novedades">
-    <button class="btn pri" style="margin-top:12px" onclick="newsSave()">📤 Publicar novedad</button></div></div>
-  <h3 style="margin:10px 0">Novedades publicadas (${S.news.length})</h3>
-  ${S.news.length?S.news.map(n=>`<div class="box"><div class="row" style="justify-content:space-between"><h3>${esc(n.title)}</h3><span class="hint">${fmtD(n.t)}${n.gp?' · '+esc(gpName(n.gp)||'Grupeta borrada'):' · Todos'}</span></div><div class="msg">${esc(n.text)}</div>${safeUrl(n.link)?`<p style="margin-top:6px"><a href="${esc(safeUrl(n.link))}" target="_blank" rel="noopener">${esc(n.link)}</a></p>`:''}<button class="btn sm red" style="margin-top:8px" onclick="newsDel(${jsq(n.id)})">🗑️ Borrar</button></div>`).join(''):'<div class="empty">Aún no hay novedades.</div>'}`;
+    <label class="l" style="display:flex;gap:8px;align-items:center;cursor:pointer"><input type="checkbox" id="nP" checked> 📲 Avisar también al móvil (aunque tengan la app cerrada)</label><p class="hint" id="nPh"></p>
+    <button class="btn pri" style="margin-top:12px" onclick="newsSave()">📤 Publicar</button></div></div>
+  <h3 style="margin:10px 0">Publicaciones (${S.news.length})</h3>
+  ${S.news.length?S.news.map(n=>`<div class="box"><div class="row" style="justify-content:space-between"><h3><span class="tag ${n.kind==='promo'?'new':n.kind==='trip'?'gp':'ok'}">${(KINDS[n.kind]||KINDS.news).join(' ')}</span> ${esc(n.title)}</h3><span class="hint">${fmtD(n.t)}${n.gp?' · '+esc(gpName(n.gp)||'Grupeta borrada'):' · Todos'}</span></div><div class="msg">${esc(n.text)}</div>${safeUrl(n.link)?`<p style="margin-top:6px"><a href="${esc(safeUrl(n.link))}" target="_blank" rel="noopener">${esc(n.link)}</a></p>`:''}<button class="btn sm red" style="margin-top:8px" onclick="newsDel(${jsq(n.id)})">🗑️ Borrar</button></div>`).join(''):'<div class="empty">Aún no hay novedades.</div>'}`;
 }
 async function avisoSave(){const t=($('aX').value||'').trim().slice(0,280);if(!t){toast('Escribe el aviso');return}
-  try{await db.collection('va_config').doc('aviso').set({text:t,active:true,t:Date.now()});toast('📣 Aviso publicado');$('aX').value='';render()}catch(e){fail(e)}}
+  const push=$('aP')&&$('aP').checked;
+  try{await db.collection('va_config').doc('aviso').set({text:t,active:true,t:Date.now()});toast('📣 Aviso publicado');$('aX').value='';render();if(push)orgPush('va_config','aviso')}catch(e){fail(e)}}
 async function avisoOff(){try{await db.collection('va_config').doc('aviso').set({text:(S.aviso&&S.aviso.text)||'',active:false,t:Date.now()});toast('Aviso quitado')}catch(e){fail(e)}}
 async function newsSave(){const ti=($('nT').value||'').trim().slice(0,80),tx=($('nX').value||'').trim().slice(0,1500),li=($('nL').value||'').trim().slice(0,500);
   if(!ti||!tx){toast('Pon título y texto');return}if(li&&!safeUrl(li)){toast('El enlace tiene que empezar por https://');return}
-  try{await db.collection('va_news').doc(newId('n')).set({title:ti,text:tx,link:li,gp:$('nG').value||'',t:Date.now()});toast('✅ Novedad publicada');$('nT').value='';$('nX').value='';$('nL').value=''}catch(e){fail(e)}}
+  const kind=KINDS[$('nK').value]?$('nK').value:'news',push=$('nP').checked,id=newId('n');
+  try{await db.collection('va_news').doc(id).set({title:ti,text:tx,link:li,gp:$('nG').value||'',kind,t:Date.now()});toast('✅ '+KINDS[kind][1]+' publicada');$('nT').value='';$('nX').value='';$('nL').value='';if(push)orgPush('va_news',id)}catch(e){fail(e)}}
 async function newsDel(id){if(!confirm('¿Borrar esta novedad?'))return;try{await db.collection('va_news').doc(id).delete();toast('Novedad borrada')}catch(e){fail(e)}}
 
 /* ---------- 💾 Copias y restaurar ---------- */
@@ -365,7 +383,7 @@ async function restore(){
   const put=async(col,l,pick)=>{for(const x of (l||[])){if(!x||!x.id||!/^[A-Za-z0-9_-]{1,80}$/.test(x.id))continue;try{await db.collection(col).doc(x.id).set(pick(x));n++}catch(e){err++}}};
   await put('va_members',d.members,x=>({name:String(x.name||'').slice(0,40),tel:String(x.tel||'').slice(0,20),t:+x.t||Date.now(),app:x.app==='pro'?'pro':'simple'}));
   await put('va_rutas',d.rutas,x=>({title:String(x.title||'').slice(0,80),date:String(x.date||''),gp:String(x.gp||''),info:String(x.info||'').slice(0,2000),pdf:String(x.pdf||'').slice(0,500),days:(x.days||[]).slice(0,14).map(y=>({title:String(y.title||'').slice(0,60),km:String(y.km||'').slice(0,8),gpx:String(y.gpx||'').slice(0,500)})),t:+x.t||Date.now()}));
-  await put('va_news',d.news,x=>({title:String(x.title||'').slice(0,80),text:String(x.text||'').slice(0,1500),link:String(x.link||'').slice(0,500),gp:String(x.gp||''),t:+x.t||Date.now()}));
+  await put('va_news',d.news,x=>({title:String(x.title||'').slice(0,80),text:String(x.text||'').slice(0,1500),link:String(x.link||'').slice(0,500),gp:String(x.gp||''),kind:['trip','promo'].includes(x.kind)?x.kind:'news',t:+x.t||Date.now()}));
   await put('va_support',d.support,x=>{const o={uid:String(x.uid||''),name:String(x.name||'').slice(0,40),tel:String(x.tel||'').slice(0,20),text:String(x.text||'').slice(0,1500),t:+x.t||Date.now()};if(x.reply){o.reply=String(x.reply).slice(0,1500);o.replyAt=+x.replyAt||Date.now();o.seen=!!x.seen}return o});
   if(d.aviso){try{await db.collection('va_config').doc('aviso').set({text:String(d.aviso.text||'').slice(0,280),active:!!d.aviso.active,t:+d.aviso.t||Date.now()});n++}catch(e){err++}}
   if(d.club&&S.club&&S.isAdm&&d.club.grupetas){try{await clubRef().update({grupetas:d.club.grupetas,gm:d.club.gm||{}});n++}catch(e){err++}}

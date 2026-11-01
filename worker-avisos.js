@@ -1,4 +1,4 @@
-// VillorvinAdventure — Worker de avisos con la app cerrada (Cloudflare) · v3.2
+// VillorvinAdventure — Worker de avisos con la app cerrada (Cloudflare) · v3.3
 // Nombre del Worker: villorvinadventure-push  →  https://villorvinadventure-push.pedrosaborrego.workers.dev
 // Secretos (Settings → Variables and Secrets), los mismos de siempre:
 //   FIREBASE_SA  = el contenido COMPLETO del archivo JSON de la cuenta de servicio de Firebase
@@ -12,6 +12,8 @@
 //   can    → salida cancelada a los apuntados
 //   alert  → avisos en ruta (pinchazo, esperad, ayuda, caída, perdido…) a los apuntados
 //   test   → prueba: el ciclista se manda un aviso a sí mismo a los 10 segundos (1 por minuto)
+//   org    → desde la consola (solo cuentas de la organización): novedad, próximo viaje, publicidad,
+//            aviso general y respuesta a una consulta. La publicidad solo llega a quien la acepta en Perfil.
 //   cron   → recordatorio la víspera (desde las 20:00) y 1 hora antes, a los apuntados
 // Seguridad: cada aviso se comprueba en la base de datos (quién lo pide, que es suyo y que es reciente)
 // y no se puede repetir para llenar de avisos los móviles del club.
@@ -33,6 +35,8 @@ const ALERTS = {
   late: 'VA PARA ALLÁ', join: 'YA ESTÁ CON VOSOTROS'
 };
 const URGENT = ['help', 'fall', 'lost'];
+// Cuentas de Google de la organización (las mismas que en las reglas de Firebase: isVAOrg)
+const ORG_EMAILS = ['pedrosaborrego@gmail.com', 'villorvinadventure@gmail.com'];
 
 export default {
   async fetch(req, env, ctxCf) {
@@ -45,16 +49,18 @@ export default {
     };
     const out = (o, s = 200) => new Response(JSON.stringify(o), { status: s, headers: { ...cors, 'Content-Type': 'application/json' } });
     if (req.method === 'OPTIONS') return new Response(null, { headers: cors });
-    if (req.method !== 'POST') return out({ ok: true, info: 'villorvinadventure-push v3.2 activo' });
+    if (req.method !== 'POST') return out({ ok: true, info: 'villorvinadventure-push v3.3 activo' });
     const C = ctx(env);
     try {
       const b = await req.json();
       if (!b || typeof b.idToken !== 'string') return out({ error: 'datos' }, 400);
-      const uid = await whoIs(C, b.idToken);
+      const user = await whoIs(C, b.idToken);
+      const uid = user && user.localId;
       if (!uid) return out({ error: 'auth' }, 401);
       const t = b.t || 'sos';
       if (t === 'sos') return out(await sos(C, uid, b));
       if (t === 'test') return out(await selfTest(C, uid, ctxCf));
+      if (t === 'org') return out(await orgEvent(C, user, b, Math.max(0, Math.min(20000, parseInt(b.from, 10) || 0))));
       if (!/^[A-Za-z0-9]{20}$/.test(b.ride || '')) return out({ error: 'datos' }, 400);
       const from = Math.max(0, Math.min(5000, parseInt(b.from, 10) || 0));
       if (t === 'new' || t === 'chg' || t === 'can') return out(await rideEvent(C, uid, t, b.ride, from));
@@ -88,7 +94,7 @@ async function whoIs(C, idToken) {
   const r = await C.f(`https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${C.env.FIREBASE_KEY}`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ idToken })
   }).then(r => r.json());
-  return r.users && r.users[0] && r.users[0].localId || null;
+  return r.users && r.users[0] || null;
 }
 
 /* ---------------- SOS a la organización (como hasta ahora) ---------------- */
@@ -115,6 +121,68 @@ async function sos(C, uid, { club, msg }) {
   const body = (tel ? 'Tel. ' + tel.trim() + '. ' : '') + 'Toca para ver dónde está y gestionarlo.';
   const r = await sendAll(C, tokens, 0, { title: 'SOS VillorvinAdventure · ' + name + ': ' + kind, body, url: './', urgent: '1', tag: 'va-sos' });
   return { ok: true, enviados: r.sent, next: r.next };
+}
+
+/* ---------------- Desde la consola: novedades, próximos viajes, publicidad, aviso general y respuestas ---------------- */
+async function orgEvent(C, user, b, from) {
+  if (!user.email || user.emailVerified !== true || !ORG_EMAILS.includes(String(user.email).toLowerCase())) throw fail('solo la organización', 403);
+  const col = String(b.col || ''), id = String(b.id || '');
+  if (!['va_news', 'va_rutas', 'va_config', 'va_support'].includes(col) || !/^[A-Za-z0-9_-]{1,60}$/.test(id)) throw fail('datos', 400);
+  if (col === 'va_config' && id !== 'aviso') throw fail('datos', 400);
+  const d = await C.get(`${col}/${id}`);
+  if (!d) throw fail('no existe', 404);
+  const ver = col === 'va_support' ? num(d.replyAt) : num(d.t);
+  if (!ver || Date.now() - ver > 60 * 60 * 1000) throw fail('antiguo: vuelve a guardarlo para avisar', 400);
+  const st = mv(mv(d.px).org);
+  if (from === 0) { if (num(st.v) === ver) return { ok: true, repetido: true }; }
+  else if (num(st.v) !== ver || from !== num(st.n)) throw fail('tanda', 400);
+
+  const kind = col === 'va_news' ? (['trip', 'promo'].includes(sv(d.kind)) ? sv(d.kind) : 'news')
+    : col === 'va_rutas' ? 'trip' : col === 'va_config' ? 'aviso' : 'reply';
+  if (kind === 'aviso' && !(d.active && d.active.booleanValue === true)) throw fail('el aviso está quitado', 400);
+  let to;
+  if (kind === 'reply') {
+    if (!sv(d.reply)) throw fail('sin respuesta', 400);
+    to = [sv(d.uid)];
+  } else {
+    const gp = sv(d.gp), club = String(b.club || '');
+    const g = /^[A-Z0-9]{6}$/.test(club) ? await C.get(`groups/${club}`) : null;
+    if (gp) {
+      if (!g) throw fail('para avisar a una grupeta, la cuenta de la consola tiene que estar en el club', 400);
+      const gm = mv(g.gm);
+      to = keys(g.members).filter(u => arr(gm[u]).includes(gp));
+    } else to = [...await listIds(C, 'va_members'), ...(g ? keys(g.members) : [])];
+  }
+  const tokens = await tokensOf(C, to, kind === 'promo');
+  const title = sv(d.title), text = sv(kind === 'reply' ? d.reply : kind === 'trip' && col === 'va_rutas' ? d.info : d.text);
+  const T = Date.now();
+  const msg = {
+    news: { title: 'Novedad: ' + title, body: text, url: `./?a=${T}#va=nov` },
+    trip: { title: 'Próximo viaje: ' + title, body: (col === 'va_rutas' && sv(d.date) ? fmtDate(sv(d.date)) + '. ' : '') + text, url: `./?a=${T}#va=${col === 'va_rutas' ? 'rutas' : 'nov'}` },
+    promo: { title: 'Publicidad · ' + title, body: text.slice(0, 170) + ' (Puedes dejar de recibir ofertas en Perfil.)', url: `./?a=${T}#va=nov` },
+    aviso: { title: 'Aviso de VillorvinAdventure', body: text, url: './' },
+    reply: { title: 'VillorvinAdventure ha respondido tu consulta', body: text, url: `./?a=${T}#va=sup` }
+  }[kind];
+  msg.tag = 'va-org-' + id;
+  const res = await sendAll(C, tokens, from, msg);
+  await C.patch(`${col}/${id}`, { px: { mapValue: { fields: { org: { mapValue: { fields: {
+    v: { integerValue: String(ver) }, n: { integerValue: String(res.next) }, t: { integerValue: String(T) }
+  } } } } } } }, ['px.org']);
+  return { ok: true, enviados: res.sent, total: tokens.length, next: res.next };
+}
+// Todos los ciclistas registrados (ids de una colección, de 300 en 300)
+async function listIds(C, col) {
+  const ids = [];
+  let pt = '';
+  for (let i = 0; i < 20; i++) {
+    const r = await C.f(`${FS}/${col}?pageSize=300&mask.fieldPaths=t${pt ? '&pageToken=' + encodeURIComponent(pt) : ''}`, { headers: await C.auth() });
+    if (!r.ok) break;
+    const j = await r.json();
+    for (const d of j.documents || []) ids.push(d.name.split('/').pop());
+    if (!j.nextPageToken) break;
+    pt = j.nextPageToken;
+  }
+  return ids;
 }
 
 /* ---------------- Prueba: aviso a uno mismo a los 10 segundos (máx. 1 por minuto) ---------------- */
@@ -267,7 +335,7 @@ async function ridesOn(C, date) {
 
 /* ---------------- Móviles y envío ---------------- */
 // Lee de una vez los avisos activados de todos los ciclistas (una sola conexión por cada 100)
-async function tokensOf(C, uids) {
+async function tokensOf(C, uids, onlyPromo) {
   const list = [...new Set(uids)].filter(u => /^[A-Za-z0-9]{10,40}$/.test(u));
   const out = [];
   for (let i = 0; i < list.length; i += 100) {
@@ -277,6 +345,7 @@ async function tokensOf(C, uids) {
     });
     if (!r.ok) continue;
     for (const x of await r.json()) if (x.found) {
+      if (onlyPromo && !((x.found.fields || {}).promo || {}).booleanValue) continue;   // publicidad: solo quien la acepta
       const u = x.found.name.split('/').slice(-3)[0];
       for (const t of keys((x.found.fields || {}).tokens)) out.push({ u, t });
     }

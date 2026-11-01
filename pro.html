@@ -1146,7 +1146,7 @@ button,.btn,.li,.chip,.mini,.lvcatch,[onclick]{touch-action:manipulation;-webkit
   <div id="adminBox" style="display:none;margin-bottom:16px"><button class="li" style="border-color:var(--bronze)" onclick="openAdmin()"><span class="em">🛡️</span><div><b>Panel de administración</b><small>Reportes, números y moderación</small></div><svg class="i chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></button></div>
   <div class="set">Modo claro <label class="sw"><input type="checkbox" id="swLight" onchange="setTheme(this.checked)"><span></span></label></div>
   <div class="set" style="flex-wrap:wrap">🗣️ Resumen por voz cada 30 min <label class="sw"><input type="checkbox" id="swRes" onchange="store.set('resumen',this.checked);toast(this.checked?'Te diré km, tiempo, desnivel y viento cada media hora':'Resumen por voz desactivado')"><span></span></label><small style="width:100%;color:var(--txt2);font-size:12px;margin-top:4px">En ruta: kilómetros, tiempo, media, metros subidos, altitud y viento. Se oye junto a los avisos de viento.</small></div>
-  <div class="set" style="flex-wrap:wrap">🔔 Avisos con la app cerrada <label class="sw"><input type="checkbox" id="swPush" onchange="setPush(this.checked)"><span></span></label><small id="pushInfo" style="width:100%;color:var(--txt2);font-size:12px;margin-top:4px">Salidas nuevas de tu club, cambios, cancelaciones y recordatorio (la víspera y 1 hora antes). En ruta: pinchazo, esperad, ayuda, caída… Aunque tengas el móvil bloqueado. También en tu Garmin, iGPSPORT o reloj (ver abajo)</small><button class="btn btn-line" id="pushTestB" style="width:100%;margin-top:8px;font-size:14px" onclick="pushTest()">📲 Probar aviso con la app cerrada</button></div>
+  <div class="set" style="flex-wrap:wrap">🔔 Avisos con la app cerrada <label class="sw"><input type="checkbox" id="swPush" onchange="setPush(this.checked)"><span></span></label><small id="pushInfo" style="width:100%;color:var(--txt2);font-size:12px;margin-top:4px">Salidas nuevas de tu club, cambios, cancelaciones y recordatorio (la víspera y 1 hora antes). En ruta: pinchazo, esperad, ayuda, caída… Aunque tengas el móvil bloqueado. También en tu Garmin, iGPSPORT o reloj (ver abajo)</small><button class="btn btn-line" id="pushTestB" style="width:100%;margin-top:8px;font-size:14px" onclick="pushTest()">📲 Probar aviso con la app cerrada</button><label style="display:flex;gap:8px;align-items:center;width:100%;margin-top:10px;font-size:14px;cursor:pointer"><input type="checkbox" id="swPromo" onchange="setPromo(this.checked)"> 📣 Recibir también ofertas y publicidad de VillorvinAdventure</label></div>
   <button class="li" style="margin-bottom:10px" onclick="openMusic()"><span class="em">🎵</span><div><b>Música en ruta</b><small>Con Spotify, por el altavoz</small></div><svg class="i chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></button>
   <button class="li" style="margin-bottom:10px" onclick="openCasco()"><span class="em casco-ic"><svg viewBox="0 0 120 84" aria-hidden="true" style="width:100%;height:100%"><path d="M50 60 L60 80 M86 60 L66 80" stroke="#94A3B8" stroke-width="3" stroke-linecap="round" fill="none"/><rect x="57" y="74" width="12" height="8" rx="2" fill="#475569"/><path d="M16 54 C16 30 40 12 66 12 C92 12 110 28 111 50 L111 56 C111 59 109 61 106 61 L24 61 C19 61 16 58 16 54Z" fill="#1E293B" stroke="#4DA3FF" stroke-width="2.5"/><path d="M4 49 C12 42 28 38 46 38 L44 47 C30 47 16 50 7 55 Z" fill="#334155" stroke="#4DA3FF" stroke-width="2" stroke-linejoin="round"/><path d="M44 24 L57 18 L60 25 L47 31Z M63 16 L77 15 L77 22 L64 23Z M83 17 L96 23 L92 29 L81 23Z" fill="#0B1220"/><path d="M24 61 L106 61" stroke="#4DA3FF" stroke-width="3" stroke-linecap="round"/><circle cx="74" cy="51" r="5" fill="#4DA3FF"/><path d="M82 46 C85 49 85 53 82 56 M87 43 C92 48 92 54 87 59" stroke="#FDBA74" stroke-width="2.2" fill="none" stroke-linecap="round"/><rect x="107" y="40" width="7" height="12" rx="2" fill="#F87171"/></svg></span><div><b>Mi casco con altavoces</b><small id="cascoSub">Voz por el casco, botones y aviso de luz</small></div><svg class="i chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></button>
   <button class="li" style="margin-bottom:10px" onclick="openGarmin()"><span class="em">⌚</span><div><b>Avisos en mi Garmin, iGPSPORT o reloj</b><small>Modelos compatibles y botón de prueba</small></div><svg class="i chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></button>
@@ -4607,6 +4607,7 @@ async function setPush(on){
 // Al entrar: si ya estaban activados, renueva el token (cambia de vez en cuando)
 async function refreshPush(){
   const sw=$('swPush');if(sw)sw.checked=!!store.get('push',0);
+  const sp=$('swPromo');if(sp)sp.checked=!!store.get('promo',0);
   try{const pi=$('pushInfo');if(pi&&isIOS()&&!pi.dataset.ios){pi.dataset.ios='1';pi.insertAdjacentHTML('beforeend','<br><b>📱 iPhone:</b> necesita iOS 16.4 o superior y la app añadida a la pantalla de inicio desde Safari. Activa los avisos entrando desde ese icono.')}}catch(e){}
   if(!store.get('push',0)||!pushReady()||Notification.permission!=='granted')return;
   try{const t=await pushToken();if(t&&t!==store.get('pushTok','')){const ref=db.collection('users').doc(uid).collection('private').doc('push');const old=store.get('pushTok','');await ref.set({tokens:{[t]:Date.now(),...(old?{[old]:FV.delete()}:{})},name:myName()},{merge:true});store.set('pushTok',t)}}catch(e){console.warn('push',e)}
@@ -7593,6 +7594,13 @@ async function vaPush(C,mid){
 }
 /* v2.7 — Avisos con la app cerrada sin funciones de Firebase: salida nueva, cambio, cancelación y avisos en ruta (Worker v3) */
 // v2.8: prueba real desde el servidor (llega a los 10 segundos, con la app cerrada)
+// v2.9: ofertas y publicidad solo si el ciclista las acepta (se puede quitar cuando quiera)
+function setPromo(on){
+  const sw=$('swPromo');if(!uid||!db){if(sw)sw.checked=!on;toast('Conectando… inténtalo en unos segundos');return}
+  db.collection('users').doc(uid).collection('private').doc('push').set({promo:!!on},{merge:true})
+    .then(()=>{store.set('promo',on?1:0);toast(on?'📣 Te avisaremos de ofertas y novedades comerciales':'Ya no recibirás ofertas ni publicidad')})
+    .catch(e=>{if(sw)sw.checked=!on;netErr(e)});
+}
 async function pushTest(){
   if(!store.get('push',0)){toast('Primero activa «Avisos con la app cerrada» (interruptor de arriba)',4000);return}
   const b=$('pushTestB');if(b)b.disabled=true;
@@ -7667,7 +7675,7 @@ function vaRutas(){
 }
 function vaNews(){
   const L=VA.news.filter(n=>vaSee(n.gp));if(L.length)store.set('vaNewsSeen',Math.max(store.get('vaNewsSeen',0),L[0].t||0));
-  $('rideBody').innerHTML=sheetHead('🆕 Novedades')+`<div id="vaNewL">`+(L.length?L.map(n=>`<div class="plc" style="margin-bottom:10px"><div class="pc-h"><span class="pc-tag">${new Date(n.t||Date.now()).toLocaleDateString('es-ES')}</span><b>${esc(n.title)}</b></div><p style="font-size:14.5px;line-height:1.45;white-space:pre-line;margin-top:6px">${esc(n.text)}</p>${vaUrl(n.link)?`<a href="${esc(vaUrl(n.link))}" target="_blank" rel="noopener" style="color:var(--lime);font-weight:700;display:inline-block;margin-top:6px">Ver más ›</a>`:''}</div>`).join(''):'<div class="empty">Aún no hay novedades.</div>')+'</div>';
+  $('rideBody').innerHTML=sheetHead('🆕 Novedades')+`<div id="vaNewL">`+(L.length?L.map(n=>`<div class="plc" style="margin-bottom:10px"><div class="pc-h"><span class="pc-tag">${n.kind==='trip'?'🧳 Próximo viaje · ':n.kind==='promo'?'📣 Publicidad · ':''}${new Date(n.t||Date.now()).toLocaleDateString('es-ES')}</span><b>${esc(n.title)}</b></div><p style="font-size:14.5px;line-height:1.45;white-space:pre-line;margin-top:6px">${esc(n.text)}</p>${vaUrl(n.link)?`<a href="${esc(vaUrl(n.link))}" target="_blank" rel="noopener" style="color:var(--lime);font-weight:700;display:inline-block;margin-top:6px">Ver más ›</a>`:''}</div>`).join(''):'<div class="empty">Aún no hay novedades.</div>')+'</div>';
   openRideId=null;if(!$('sh-ride').classList.contains('show'))openSheet('sh-ride');setTimeout(()=>{try{renderVA()}catch(e){}},300);
 }
 function vaSup(){
@@ -7703,6 +7711,9 @@ function vaMainWatch(){
   if(vaMainW!=null||!navigator.geolocation)return;
   vaMainW=navigator.geolocation.watchPosition(p=>{if(live.on||!meMarker)return;meMarker.setLngLat([p.coords.longitude,p.coords.latitude])},()=>{},{enableHighAccuracy:false,maximumAge:15000,timeout:30000});
 }
+/* v2.9: al tocar un aviso de la organización se abre Novedades, Rutas del club o Consultas (#va=nov|rutas|sup) */
+(function(){const m=/va=(nov|rutas|sup)/.exec(location.hash);if(!m)return;history.replaceState(null,'',location.pathname);let n=0;
+  const t=()=>{if(VA.on){setTimeout(()=>{try{({nov:vaNews,rutas:vaRutas,sup:vaSup})[m[1]]()}catch(e){}},700)}else if(n++<30)setTimeout(t,500)};setTimeout(t,800)})();
 /* v2.5: al terminar de cargar, vuelve a pintar el club para que salga la tarjeta de VillorvinAdventure */
 try{renderGroup()}catch(e){}
 </script>
