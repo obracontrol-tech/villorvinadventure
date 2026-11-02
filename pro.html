@@ -7719,6 +7719,33 @@ function vaMainWatch(){
   if(vaMainW!=null||!navigator.geolocation)return;
   vaMainW=navigator.geolocation.watchPosition(p=>{if(live.on||!meMarker)return;meMarker.setLngLat([p.coords.longitude,p.coords.latitude])},()=>{},{enableHighAccuracy:false,maximumAge:15000,timeout:30000});
 }
+/* v3.1 — Licencia: si el propietario suspende VillorvinAdventure, los ciclistas ven «Servicio en pausa»,
+   pero la seguridad sigue (Asistencia, 112 y enviar la ubicación). Nunca sale en plena salida: espera a que termine */
+let vaLic={estado:'activo'},vaLicSub=null;
+setInterval(()=>{try{if(!vaLicSub&&db&&uid)vaLicSub=db.collection('config').doc('licencia').onSnapshot(s=>{vaLic=s.exists?{estado:'activo',...s.data()}:{estado:'activo'};vaLicApply()},()=>{});vaLicApply()}catch(e){}},3000);
+function vaLicApply(){
+  const on=vaLic.estado==='suspendido'&&!(typeof live!=='undefined'&&live&&live.on);
+  let d=document.getElementById('vaPause');
+  if(!on){if(d)d.remove();return}
+  if(d)return;
+  const bs='display:flex;align-items:center;justify-content:center;min-height:54px;border-radius:16px;font-weight:800;font-size:16.5px;text-decoration:none;border:0;font-family:inherit;cursor:pointer';
+  d=document.createElement('div');d.id='vaPause';d.setAttribute('role','alertdialog');
+  d.setAttribute('style','position:fixed;inset:0;z-index:2147483000;background:#06162E;color:#fff;display:grid;place-items:center;padding:24px;text-align:center;overflow:auto');
+  d.innerHTML=`<div style="max-width:420px;width:100%"><img src="va-logo.png" alt="VillorvinAdventure" style="width:70%;max-width:260px;height:auto">
+    <div style="font-size:46px;margin-top:16px">⏸️</div><h2 style="margin:6px 0 8px;font-size:24px">Servicio en pausa</h2>
+    <p style="color:#A9BCD6;line-height:1.5;font-size:15.5px">VillorvinAdventure ha pausado la app temporalmente. Tus datos están guardados y no se pierde nada.</p>
+    <p style="margin:18px 0 10px;font-weight:800">🛡️ La seguridad sigue activa:</p>
+    <div style="display:grid;gap:10px">
+     <a href="tel:+34610200580" style="${bs};background:#fff;color:#B91C1C">📞 Llamar a Asistencia · 610 200 580</a>
+     <a href="tel:112" style="${bs};background:rgba(255,255,255,.12);color:#fff;border:2px solid rgba(255,255,255,.35)">🚑 Llamar al 112</a>
+     <button onclick="vaPauseLoc()" style="${bs};background:#4DA3FF;color:#06162E">📍 Enviar mi ubicación por WhatsApp</button></div></div>`;
+  document.body.appendChild(d);
+}
+function vaPauseLoc(){
+  if(!navigator.geolocation){alert('Este móvil no permite usar el GPS');return}
+  navigator.geolocation.getCurrentPosition(p=>{const t='📍 Estoy aquí: https://maps.google.com/?q='+p.coords.latitude.toFixed(5)+','+p.coords.longitude.toFixed(5);location.href='https://wa.me/?text='+encodeURIComponent(t)},
+    ()=>alert('No se ha podido saber dónde estás. Activa la ubicación del móvil y vuelve a probar.'),{enableHighAccuracy:true,timeout:15000,maximumAge:60000});
+}
 /* v3.0: aviso tocado → visto (#…p=CLAVE) */
 (function(){const m=/[#&]p=([A-Za-z0-9_-]{1,100})/.exec(location.hash);if(!m)return;const k=m[1];let n=0;
   if(!/va=/.test(location.hash))history.replaceState(null,'',location.pathname);

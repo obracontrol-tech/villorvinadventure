@@ -139,7 +139,7 @@ async function orgPush(col,id){
 /* Las tres grupetas de VillorvinAdventure */
 const VA_GPS=[['Rutas del club','Carretera','Medio'],['Salida libre','Mixta','Tranquilo'],['Family Members','Mixta','Medio']];
 
-const S={tab:'ciclistas',push:[],members:[],rutas:[],news:[],support:[],aviso:null,club:null,clubId:null,isAdm:false,subs:[],editRuta:null};
+const S={tab:'ciclistas',lic:{estado:'activo',msg:''},owner:false,push:[],members:[],rutas:[],news:[],support:[],aviso:null,club:null,clubId:null,isAdm:false,subs:[],editRuta:null};
 
 /* ---------- Acceso ---------- */
 function gate(msg,showIn,showOut){$('gate').style.display='grid';$('app').style.display='none';$('gMsg').innerHTML=msg;$('gBtn').style.display=showIn?'flex':'none';$('gOut').style.display=showOut?'flex':'none'}
@@ -150,6 +150,8 @@ auth.onAuthStateChanged(async u=>{
   if(!u||u.isAnonymous){gate('Consola de la organización.<br>Entra con tu cuenta de Google.',true,false);return}
   gate('Comprobando permisos…',false,false);
   S.subs.forEach(x=>{try{x()}catch(e){}});S.subs=[];
+  S.owner=String(u.email||'').toLowerCase()===LIC_OWNER&&u.emailVerified===true;
+  S.subs.push(db.collection('config').doc('licencia').onSnapshot(s=>{S.lic=s.exists?{estado:'activo',msg:'',...s.data()}:{estado:'activo',msg:''};render()},e=>console.warn('licencia',e)));
   S.subs.push(db.collection('va_members').onSnapshot(s=>{
     S.members=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.t||0)-(a.t||0));
     $('gate').style.display='none';$('app').style.display='block';render();
@@ -173,16 +175,59 @@ async function loadClub(myUid){
 }
 
 /* ---------- Pestañas ---------- */
-const TABS=[['ciclistas','👥 Ciclistas'],['grupetas','🏷️ Grupetas'],['rutas','🗺️ Rutas y fichas'],['consultas','❓ Consultas'],['novedades','🆕 Novedades, viajes y avisos'],['copias','💾 Copias']];
+/* v3.1 — Licencia: solo el propietario (JM Prestige AI Solutions) puede cambiarla. Se guarda en config/licencia,
+   donde las reglas de Firebase solo dejan escribir a pedrosaborrego@gmail.com */
+const LIC_OWNER='pedrosaborrego@gmail.com';
+const LIC_WA='34643223301';
+const LIC_DEF={aviso:'Hay una factura pendiente de pago. Para evitar la suspensión del servicio, contacta con JM Prestige AI Solutions.',suspendido:'El servicio está suspendido temporalmente por un pago pendiente. Contacta con JM Prestige AI Solutions para reactivarlo.'};
+const TABS=[['ciclistas','👥 Ciclistas'],['grupetas','🏷️ Grupetas'],['rutas','🗺️ Rutas y fichas'],['consultas','❓ Consultas'],['novedades','🆕 Novedades, viajes y avisos'],['copias','💾 Copias'],['licencia','🔑 Licencia']];
 function go(t){S.tab=t;S.editRuta=null;render();window.scrollTo(0,0)}
 function render(){
   if($('app').style.display!=='block')return;
   const pend=S.support.filter(x=>!x.reply).length;
-  $('tabs').innerHTML=TABS.map(([k,t])=>`<button class="tab${S.tab===k?' on':''}" onclick="go('${k}')">${t}${k==='consultas'&&pend?`<span class="dot">${pend}</span>`:''}</button>`).join('');
-  const f={ciclistas:vCiclistas,grupetas:vGrupetas,rutas:vRutas,consultas:vConsultas,novedades:vNovedades,copias:vCopias}[S.tab];
+  const est=S.lic.estado||'activo';
+  // Suspendido: la consola del cliente se bloquea (el propietario la sigue viendo)
+  if(est==='suspendido'&&!S.owner){$('tabs').innerHTML='';$('view').innerHTML=licBlock();return}
+  if(S.tab==='licencia'&&!S.owner)S.tab='ciclistas';
+  $('tabs').innerHTML=TABS.filter(([k])=>k!=='licencia'||S.owner).map(([k,t])=>`<button class="tab${S.tab===k?' on':''}" onclick="go('${k}')">${t}${k==='consultas'&&pend?`<span class="dot">${pend}</span>`:''}</button>`).join('');
+  const f={ciclistas:vCiclistas,grupetas:vGrupetas,rutas:vRutas,consultas:vConsultas,novedades:vNovedades,copias:vCopias,licencia:vLicencia}[S.tab];
   const keep=document.activeElement&&document.activeElement.id&&$('view').contains(document.activeElement)?document.activeElement.id:null;
-  if(keep&&(S.tab==='rutas'&&S.editRuta||['rq','nT','nX','nL','nG','nK','nP','aX','aP','gpNew','rf','rPush'].includes(keep)||/^rep_/.test(keep)))return;   // no borrar lo que estás escribiendo
-  $('view').innerHTML=f();
+  if(keep&&(S.tab==='rutas'&&S.editRuta||['rq','nT','nX','nL','nG','nK','nP','aX','aP','gpNew','rf','rPush','licMsg'].includes(keep)||/^rep_/.test(keep)))return;   // no borrar lo que estás escribiendo
+  $('view').innerHTML=licBanner()+f();
+}
+
+/* ---------- 🔑 Licencia (solo el propietario) ---------- */
+function licBanner(){
+  const est=S.lic.estado||'activo';
+  if(S.owner&&est!=='activo')return `<div class="warn" style="${est==='suspendido'?'border-color:var(--red);background:rgba(239,68,68,.12)':''}">🔑 <b>Licencia: ${est==='suspendido'?'🔴 SUSPENDIDA':'🟡 AVISO DE PAGO'}.</b> Tú ves la consola normal porque eres el propietario. <a href="#" onclick="go('licencia');return false">Cambiar</a></div>`;
+  if(est==='aviso')return `<div class="warn">⚠️ <b>Aviso importante:</b> ${esc(S.lic.msg||LIC_DEF.aviso)} <a href="https://wa.me/${LIC_WA}" target="_blank" rel="noopener">💬 Contactar</a></div>`;
+  return '';
+}
+function licBlock(){
+  return `<div class="box" style="text-align:center;padding:30px 18px;border-color:var(--red)"><div style="font-size:52px">⏸️</div><h2 style="margin:10px 0">Consola suspendida</h2>
+   <p style="line-height:1.5;max-width:520px;margin:0 auto">${esc(S.lic.msg||LIC_DEF.suspendido)}</p>
+   <p class="hint" style="margin-top:10px">Tus datos están guardados y no se pierde nada. Las funciones de seguridad de los ciclistas (SOS y llamadas de emergencia) siguen funcionando.</p>
+   <a class="btn pri" style="margin-top:16px;display:inline-flex" href="https://wa.me/${LIC_WA}" target="_blank" rel="noopener">💬 Contactar con JM Prestige AI Solutions</a></div>`;
+}
+function vLicencia(){
+  if(!S.owner)return '';
+  const est=S.lic.estado||'activo';
+  const b=(k,t,c)=>`<button class="btn${est===k?' pri':''}" style="flex:1;min-width:150px;${est===k?'':'opacity:.85'};${c}" onclick="licSet('${k}')">${t}${est===k?' ✓':''}</button>`;
+  return `<div class="box"><h2>🔑 Licencia de VillorvinAdventure</h2><p class="hint">Solo tú ves esta pestaña y solo tu cuenta puede cambiarla. Estado actual: <b>${est==='activo'?'🟢 Activo':est==='aviso'?'🟡 Aviso de pago':'🔴 Suspendido'}</b>${S.lic.t?' · cambiado '+fmt(S.lic.t):''}</p>
+   <label class="l" for="licMsg">Mensaje para el cliente (si lo dejas vacío se usa el de serie)</label>
+   <textarea class="inp" id="licMsg" maxlength="300" placeholder="${esc(est==='suspendido'?LIC_DEF.suspendido:LIC_DEF.aviso)}">${esc(S.lic.msg||'')}</textarea>
+   <div class="row" style="margin-top:12px;gap:8px;flex-wrap:wrap">${b('activo','🟢 Activo','')}${b('aviso','🟡 Aviso de pago','')}${b('suspendido','🔴 Suspender','')}</div>
+   <div class="hint" style="margin-top:14px;line-height:1.55">
+    <b>🟢 Activo:</b> todo normal.<br>
+    <b>🟡 Aviso de pago:</b> sale el mensaje arriba en la consola del cliente. Los ciclistas no ven nada.<br>
+    <b>🔴 Suspendido:</b> la consola del cliente se bloquea y en la app los ciclistas ven «Servicio en pausa», con los botones de seguridad (Asistencia, 112 y enviar ubicación). A quien esté en plena salida no le sale hasta que la termine.<br>
+    Para reactivarlo, vuelve a 🟢 Activo: todo vuelve al momento y no se pierde ningún dato.</div></div>`;
+}
+async function licSet(k){
+  if(!S.owner)return;
+  if(k==='suspendido'&&!confirm('¿Suspender VillorvinAdventure?\n\nSe bloquea la consola del cliente y los ciclistas verán «Servicio en pausa» (la seguridad sigue funcionando).'))return;
+  const m=(($('licMsg')||{}).value||'').trim().slice(0,300);
+  try{await db.collection('config').doc('licencia').set({estado:k,msg:k==='activo'?'':m,t:Date.now()});toast(k==='activo'?'🟢 Licencia activa':k==='aviso'?'🟡 Aviso de pago publicado':'🔴 Servicio suspendido')}catch(e){fail(e)}
 }
 const gpList=()=>Object.entries((S.club&&S.club.grupetas)||{}).map(([id,g])=>({id,...g})).sort((a,b)=>String(a.name).localeCompare(String(b.name)));
 const gpName=id=>((S.club&&S.club.grupetas)||{})[id]?.name||'';
