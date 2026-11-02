@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="es"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#06162E">
+<meta name="robots" content="noindex">
+<title>Ubicación en directo · VillorvinAdventure</title>
+<meta name="description" content="Mira en el mapa dónde está tu familiar. No hace falta instalar nada.">
+<meta property="og:title" content="📍 Ubicación en directo · VillorvinAdventure">
+<meta property="og:description" content="Toca para ver en el mapa dónde está. No hace falta instalar nada.">
+<meta property="og:image" content="https://obracontrol-tech.github.io/villorvinadventure/va-icon.png">
+<link rel="icon" href="va-icon-192.png">
+<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
+<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:#06162E;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:#fff;-webkit-text-size-adjust:100%}
+#map{position:fixed;inset:0}
+.top{position:fixed;left:10px;right:10px;top:calc(10px + env(safe-area-inset-top));z-index:5;display:flex;align-items:center;gap:8px;background:rgba(6,22,46,.86);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-radius:18px;padding:8px 12px;box-shadow:0 6px 18px rgba(0,0,0,.3)}
+.top img{width:30px;height:30px;border-radius:8px}
+.top b{font-size:15px}.top b span{color:#4DA3FF}
+.top small{margin-left:auto;font-size:11px;color:#C9D3E0;text-align:right}
+.card{position:fixed;left:10px;right:10px;bottom:calc(12px + env(safe-area-inset-bottom));z-index:5;background:rgba(6,22,46,.92);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-radius:22px;padding:14px 16px;box-shadow:0 10px 30px rgba(0,0,0,.4)}
+.who{display:flex;align-items:center;gap:12px}
+.av{width:46px;height:46px;border-radius:50%;background:#4DA3FF;color:#06162E;display:grid;place-items:center;font-weight:900;font-size:20px;flex-shrink:0}
+.who h1{font-size:18px;line-height:1.2}
+.who p{font-size:13.5px;color:#C9D3E0;margin-top:2px}
+.st{display:inline-block;margin-top:10px;padding:5px 10px;border-radius:12px;font-size:13px;font-weight:800}
+.ok{background:rgba(34,197,94,.2);color:#4ADE80}.old{background:rgba(245,158,11,.2);color:#FBBF24}.end{background:rgba(148,163,184,.2);color:#CBD5E1}
+.btns{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+.btns a,.btns button{display:flex;align-items:center;justify-content:center;gap:6px;min-height:46px;border-radius:23px;font-weight:800;font-size:14.5px;text-decoration:none;border:0;font-family:inherit}
+.b1{background:#4DA3FF;color:#06162E}.b2{background:rgba(255,255,255,.12);color:#fff}
+.msg{position:fixed;inset:0;display:grid;place-items:center;text-align:center;padding:30px;z-index:10;background:#06162E}
+.msg h2{font-size:20px;margin:12px 0 6px}.msg p{color:#C9D3E0}
+.pin{display:flex;flex-direction:column;align-items:center;filter:drop-shadow(0 3px 5px rgba(0,0,0,.45))}
+.pin b{width:40px;height:40px;border-radius:50%;background:#4DA3FF;border:3px solid #fff;display:grid;place-items:center;color:#06162E;font-weight:900;font-size:17px}
+.pin span{margin-top:3px;background:#06162E;color:#fff;font-size:12px;font-weight:800;padding:2px 8px;border-radius:9px}
+.pulse{animation:pl 1.6s infinite}@keyframes pl{0%{box-shadow:0 0 0 0 rgba(77,163,255,.8)}70%{box-shadow:0 0 0 18px rgba(77,163,255,0)}100%{box-shadow:0 0 0 0 rgba(77,163,255,0)}}
+.alrt{position:fixed;left:10px;right:10px;top:calc(64px + env(safe-area-inset-top));z-index:8;border-radius:22px;padding:16px;text-align:center;box-shadow:0 10px 30px rgba(0,0,0,.5);display:none}
+.alrt.fall{display:block;background:linear-gradient(160deg,#DC2626,#7F1D1D);animation:af 1s infinite}
+.alrt.ok{display:block;background:linear-gradient(160deg,#16A34A,#14532D)}
+@keyframes af{0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,.9)}50%{box-shadow:0 0 0 14px rgba(239,68,68,0)}}
+.alrt h2{font-size:23px;line-height:1.2}.alrt p{font-size:14.5px;margin-top:6px;opacity:.95}
+.alrt .ab{display:grid;gap:8px;margin-top:12px}.alrt .ab a,.alrt .ab button{min-height:52px;border-radius:16px;border:0;font-weight:900;font-size:17px;display:flex;align-items:center;justify-content:center;text-decoration:none;font-family:inherit}
+.a112{background:#fff;color:#B91C1C}.a2{background:rgba(255,255,255,.18);color:#fff;border:2px solid rgba(255,255,255,.5)!important}
+.snd{margin-top:8px;width:100%;min-height:42px;border-radius:21px;border:1px dashed rgba(255,255,255,.35);background:transparent;color:#C9D3E0;font-weight:700;font-family:inherit;font-size:13.5px}
+.foot{font-size:11px;color:#8FA0B5;text-align:center;margin-top:10px}
+.foot a{color:#4DA3FF}
+</style></head><body>
+<div id="map"></div>
+<div class="top"><img src="va-icon-192.png" alt=""><b>Villorvin<span>Adventure</span></b><small>Ubicación en directo<br>sin instalar nada</small></div>
+<div class="card" id="card" style="display:none">
+  <div class="who"><div class="av" id="av">?</div><div><h1 id="nm">…</h1><p id="sub"></p></div></div>
+  <span class="st ok" id="st">…</span>
+  <div class="btns"><a class="b1" id="gm" href="#" target="_blank" rel="noopener">🧭 Cómo llegar</a><button class="b2" onclick="center()">📍 Centrar</button></div>
+  <button class="snd" id="snd" onclick="sndOn()">🔔 Activar alarma sonora (por si hay una caída)</button>
+  <div class="foot">Se actualiza solo. Puedes dejar esta página abierta. · <a href="https://www.villorvinadventure.com/inicio" target="_blank" rel="noopener">VillorvinAdventure</a></div>
+</div>
+<div class="alrt" id="alrt" role="alert" aria-live="assertive"></div>
+<div class="msg" id="msg"><div><div style="font-size:48px">📍</div><h2 id="mt">Cargando la ubicación…</h2><p id="mp">Un momento, por favor.</p></div></div>
+<script>
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function fail(t,p){$('msg').style.display='grid';$('mt').textContent=t;$('mp').textContent=p}
+const id=(new URLSearchParams(location.search).get('v')||'').toLowerCase();
+if(!/^[a-z0-9]{6,20}$/.test(id))fail('Enlace no válido','Pide a tu familiar que te lo vuelva a enviar.');
+else{
+  firebase.initializeApp({apiKey:"AIzaSyBiPm00hsVVaLJ8VH7DG2JmdJydosDhCQM",authDomain:"villorvinadventure-38c74.firebaseapp.com",projectId:"villorvinadventure-38c74",storageBucket:"villorvinadventure-38c74.firebasestorage.app",messagingSenderId:"788088549275",appId:"1:788088549275:web:ba212f3dcb45e16512bb3e"});
+  const map=new maplibregl.Map({container:'map',style:'https://tiles.openfreemap.org/styles/liberty',center:[-3.7,40.4],zoom:5,attributionControl:{compact:true}});
+  let mk=null,first=true,last=null;
+  window.center=()=>{if(last)map.easeTo({center:[last.lng,last.lat],zoom:Math.max(map.getZoom(),15)})};
+  const ago=t=>{const m=Math.max(0,Math.round((Date.now()-t)/60000));return m<1?'ahora mismo':m<60?`hace ${m} min`:`hace ${Math.floor(m/60)} h ${m%60} min`};
+  function paint(d){
+    if(!d)return;
+    const name=String(d.name||'Tu familiar');
+    $('nm').textContent=name;$('av').textContent=name.trim().charAt(0).toUpperCase()||'?';
+    const act=d.active&&!(d.until&&Date.now()>d.until);
+    const stale=Date.now()-(d.t||0)>5*60000;
+    const st=$('st');
+    if(!act){st.className='st end';st.textContent='✅ Ya no está compartiendo · última posición '+ago(d.t)}
+    else if(stale){st.className='st old';st.textContent='⚠️ Última posición '+ago(d.t)+' · puede estar sin cobertura o con la app cerrada'}
+    else{st.className='st ok';st.textContent='🟢 En directo · actualizado '+ago(d.t)}
+    $('sub').textContent=act?(d.riding?`🚴 En bici${d.km!=null?' · '+Number(d.km).toFixed(1).replace('.',',')+' km':''}${d.speed?' · '+Math.round(d.speed)+' km/h':''}`:'📍 Compartiendo su ubicación'+(d.acc>60?' · GPS poco preciso (±'+d.acc+' m)':'')):'Salida terminada';
+    if(d.lat!=null&&d.lng!=null){
+      last={lat:+d.lat,lng:+d.lng};
+      $('gm').href='https://www.google.com/maps/dir/?api=1&destination='+last.lat+','+last.lng;
+      if(!mk){const el=document.createElement('div');el.className='pin';el.innerHTML=`<b class="${act?'pulse':''}">${esc(name.charAt(0).toUpperCase())}</b><span>${esc(name.split(' ')[0])}</span>`;mk=new maplibregl.Marker({element:el,anchor:'bottom'}).setLngLat([last.lng,last.lat]).addTo(map)}
+      else{mk.setLngLat([last.lng,last.lat]);mk.getElement().querySelector('b').className=act?'pulse':''}
+      const tr=(d.trail||[]).map(p=>[+p.o,+p.a]).filter(p=>isFinite(p[0])&&isFinite(p[1]));
+      const draw=()=>{const src=map.getSource('tr');const gj={type:'Feature',geometry:{type:'LineString',coordinates:tr.length>1?tr:[[last.lng,last.lat],[last.lng,last.lat]]}};
+        if(src)src.setData(gj);else{map.addSource('tr',{type:'geojson',data:gj});map.addLayer({id:'tr2',type:'line',source:'tr',paint:{'line-color':'#06162E','line-width':8,'line-opacity':.6},layout:{'line-cap':'round','line-join':'round'}});map.addLayer({id:'tr',type:'line',source:'tr',paint:{'line-color':'#4DA3FF','line-width':5},layout:{'line-cap':'round','line-join':'round'}})}};
+      if(map.isStyleLoaded())draw();else map.once('load',draw);
+      if(first){map.jumpTo({center:[last.lng,last.lat],zoom:15});first=false}else if(act)map.easeTo({center:[last.lng,last.lat],duration:800});
+    }else if(first&&act){$('sub').textContent='Esperando la primera posición del GPS…'}
+    $('msg').style.display='none';$('card').style.display='block';
+  }
+  /* ===== Aviso de caída para la familia ===== */
+  let AC=null,seen=null,ring=null;const T0=document.title;
+  window.sndOn=()=>{try{AC=AC||new (window.AudioContext||window.webkitAudioContext)();AC.resume();beep(1)}catch(e){}
+    try{localStorage.setItem('vaSnd','1')}catch(e){}
+    $('snd').textContent='🔔 Alarma sonora activada';$('snd').disabled=true;
+    if('Notification' in window&&Notification.permission==='default')Notification.requestPermission().catch(()=>{})};
+  function beep(n){if(!AC)return;let t=AC.currentTime+.02;for(let k=0;k<(n||6);k++){[1400,950].forEach(fq=>{const o=AC.createOscillator(),g=AC.createGain();o.type='sawtooth';o.frequency.value=fq;g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.6,t+.01);g.gain.setValueAtTime(.6,t+.2);g.gain.linearRampToValueAtTime(0,t+.22);o.connect(g);g.connect(AC.destination);o.start(t);o.stop(t+.23);t+=.24})}}
+  function stopRing(){clearInterval(ring);ring=null;document.title=T0;try{navigator.vibrate&&navigator.vibrate(0)}catch(e){}}
+  window.silence=()=>{stopRing();const b=$('alrt').querySelector('.sil');if(b)b.remove()};
+  function showAlert(d){
+    const a=d.alert,box=$('alrt');const name=esc(String(d.name||'Tu familiar').split(' ')[0]);
+    if(!a||!a.type||Date.now()-(a.t||0)>3*3600000){box.className='alrt';stopRing();return}
+    const key=a.type+a.t;
+    if(a.type==='fall'){
+      const nn=(x,y)=>isFinite(+x)&&isFinite(+y)&&x!==null&&y!==null?(+x)+','+(+y):'';const ll=a.lat!=null?nn(a.lat,a.lng):(last?nn(last.lat,last.lng):'');
+      box.className='alrt fall';
+      box.innerHTML=`<h2>🚑 ${a.test?'PRUEBA · ':''}POSIBLE CAÍDA</h2><p><b>${name}</b> puede haberse caído y no ha respondido (${ago(a.t)}).</p><p>Llámale. Si no contesta, llama a la Asistencia de VillorvinAdventure (610 200 580) y di dónde está.</p>
+        <div class="ab"><a class="a112" href="tel:+34610200580">📞 Llamar a Asistencia VillorvinAdventure</a><a class="a2" href="tel:112">🚑 Llamar al 112</a>${ll?`<a class="a2" href="https://www.google.com/maps/dir/?api=1&destination=${ll}" target="_blank" rel="noopener">🧭 Ir hasta allí</a>`:''}${ring||seen!==key?'<button class="a2 sil" onclick="silence()">🔕 Silenciar alarma</button>':''}</div>`;
+      if(seen!==key){seen=key;if(ll){const [la,lo]=ll.split(',').map(Number);map.easeTo({center:[lo,la],zoom:16,duration:800})}
+        const go=()=>{beep(6);try{navigator.vibrate&&navigator.vibrate([700,300,700,300,700])}catch(e){}document.title=document.title===T0?'🚑 ¡POSIBLE CAÍDA!':T0};
+        stopRing();go();ring=setInterval(go,a.test?4000:8000);if(a.test)setTimeout(stopRing,12000);
+        try{if('Notification' in window&&Notification.permission==='granted')new Notification('🚑 Posible caída de '+String(d.name||'tu familiar'),{body:'No ha respondido. Abre el aviso para ver dónde está.',requireInteraction:true})}catch(e){}}
+    }else if(a.type==='ok'){
+      stopRing();box.className='alrt ok';box.innerHTML=`<h2>✅ ${a.test?'Prueba terminada':'Está bien'}</h2><p><b>${name}</b> ha confirmado que está bien (${ago(a.t)}).</p>`;
+      if(seen!==key){seen=key;setTimeout(()=>{if(box.className==='alrt ok')box.className='alrt'},60000)}
+    }
+  }
+  try{if(localStorage.getItem('vaSnd')==='1'){const u=()=>{window.sndOn();document.removeEventListener('pointerdown',u)};document.addEventListener('pointerdown',u)}}catch(e){}
+  let cur=null;setInterval(()=>{paint(cur);if(cur)showAlert(cur)},20000);
+  Promise.resolve(firebase.auth().signInAnonymously()).then(()=>{
+    firebase.firestore().collection('share').doc(id).onSnapshot(s=>{
+      if(!s.exists){fail('Este enlace ya no está activo','Puede que tu familiar haya dejado de compartir su ubicación.');return}
+      cur=s.data();paint(cur);showAlert(cur);
+    },e=>fail('No se pudo cargar','Revisa tu conexión a internet y vuelve a abrir el enlace.'));
+  }).catch(()=>fail('No se pudo conectar','Revisa tu conexión a internet y vuelve a abrir el enlace.'));
+}
+</script>
+</body></html>
