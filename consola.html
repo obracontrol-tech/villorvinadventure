@@ -99,7 +99,7 @@ tr:last-child td{border-bottom:none}
     </div>
     <nav class="tabs" id="tabs" aria-label="Apartados de la consola"></nav>
     <main id="view"></main>
-    <p class="foot">Asistencia VillorvinAdventure · 610 200 580 · <a href="https://www.villorvinadventure.com/inicio" target="_blank" rel="noopener">villorvinadventure.com</a> · Consola versión 3.3</p>
+    <p class="foot">Asistencia VillorvinAdventure · 610 200 580 · <a href="https://www.villorvinadventure.com/inicio" target="_blank" rel="noopener">villorvinadventure.com</a> · Consola versión 3.3.1</p>
   </div>
 </div>
 <div id="toast" role="status" aria-live="polite"></div>
@@ -150,7 +150,6 @@ auth.onAuthStateChanged(async u=>{
   if(!u||u.isAnonymous){gate('Consola de la organización.<br>Entra con tu cuenta de Google.',true,false);return}
   gate('Comprobando permisos…',false,false);
   S.subs.forEach(x=>{try{x()}catch(e){}});S.subs=[];
-  S.owner=String(u.email||'').toLowerCase()===LIC_OWNER&&u.emailVerified===true;
   S.subs.push(db.collection('config').doc('licencia').onSnapshot(s=>{S.lic=s.exists?{estado:'activo',msg:'',...s.data()}:{estado:'activo',msg:''};render()},e=>console.warn('licencia',e)));
   S.subs.push(db.collection('va_members').onSnapshot(s=>{
     S.members=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.t||0)-(a.t||0));
@@ -175,9 +174,8 @@ async function loadClub(myUid){
 }
 
 /* ---------- Pestañas ---------- */
-/* v3.1 — Licencia: se cambia SOLO desde el panel master de RideSafe (config/licencia, donde las reglas de Firebase
-   solo dejan escribir a pedrosaborrego@gmail.com). Aquí solo se muestra el aviso o el bloqueo al cliente */
-const LIC_OWNER='pedrosaborrego@gmail.com';
+/* v3.1 — Licencia: se cambia SOLO desde el panel master del propietario (config/licencia, donde las reglas de Firebase
+   solo dejan escribir al propietario). Aquí solo se muestra el aviso o el bloqueo al cliente */
 const LIC_WA='34643223301';
 const LIC_DEF={aviso:'Hay una factura pendiente de pago. Para evitar la suspensión del servicio, contacta con JM Prestige AI Solutions.',suspendido:'El servicio está suspendido temporalmente por un pago pendiente. Contacta con JM Prestige AI Solutions para reactivarlo.'};
 const TABS=[['ciclistas','👥 Ciclistas'],['grupetas','🏷️ Grupetas'],['rutas','🗺️ Rutas y fichas'],['consultas','❓ Consultas'],['novedades','🆕 Novedades, viajes y avisos'],['copias','💾 Copias']];
