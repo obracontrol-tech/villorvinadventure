@@ -1192,7 +1192,7 @@ button,.btn,.li,.chip,.mini,.lvcatch,[onclick]{touch-action:manipulation;-webkit
   </div>
   <button class="li rs-pro" style="margin-top:14px" onclick="openPro()"><span class="em">⭐</span><div><b>Solicita la Pro de VillorvinAdventure</b><small>Para miembros. Misma cuenta, mismos datos.</small></div></button>
   <div class="shopline" id="shopLine" style="display:none"></div>
-  <p style="color:var(--txt2);font-size:13px;text-align:center;margin-top:20px">VillorvinAdventure Simple · versión 3.3.1</p>
+  <p style="color:var(--txt2);font-size:13px;text-align:center;margin-top:20px">VillorvinAdventure Simple · versión 3.3.2</p>
 </section>
 
 <!-- ============ BARRA INFERIOR ============ -->
@@ -1226,6 +1226,7 @@ button,.btn,.li,.chip,.mini,.lvcatch,[onclick]{touch-action:manipulation;-webkit
     <button class="main" onclick="openCreate()"><span class="em">📅</span><div><b>Crear salida</b><small>Día, hora, punto de salida y encuentro</small></div></button>
     <button onclick="closeSheets();go('rutas');setTimeout(()=>openSheet('sh-plan'),250)"><span class="em">🗺️</span><div><b>Nueva ruta</b><small>De A a B, por etapas o circular</small></div></button>
     <button onclick="closeSheets();pickFile()"><span class="em">📂</span><div><b>Subir GPX o TCX</b><small>Una ruta para hacer o una salida de tu reloj</small></div></button>
+    <button onclick="closeSheets();ghPlan()"><span class="em">🧭</span><div><b>Planificar en GraphHopper</b><small>Rutas de MTB por senderos · descarga el GPX y súbelo aquí</small></div></button>
   </div>
 </div>
 
@@ -2907,6 +2908,13 @@ function openBadges(){
 const X_SVG='<svg class="i" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg>';
 const sheetHead=t=>`<h2>${t} <button class="x" onclick="closeSheets()" aria-label="Cerrar">${X_SVG}</button></h2>`;
 const kmTxt=d=>d<1?Math.round(d*1000)+' m':fmtNum(d,1)+' km';
+// Planificar en GraphHopper (web): abre su mapa con el perfil MTB en tu zona; el ciclista descarga el GPX y lo sube aquí
+function ghPlan(){
+  let ll=null;try{ll=hereLL()}catch(e){}
+  const p=ll&&isFinite(+ll[0])&&isFinite(+ll[1])&&(+ll[0]||+ll[1])?'point='+(+ll[0]).toFixed(5)+'%2C'+(+ll[1]).toFixed(5)+'&':'';
+  window.open('https://graphhopper.com/maps/?'+p+'profile=mtb&layer=OpenStreetMap&locale=es','_blank','noopener');
+  setTimeout(()=>toast('Dibuja la ruta, pulsa «GPX» y vuelve aquí: ➕ → «Subir GPX o TCX»',7000),500);
+}
 function hereLL(){if(meMarker){const l=meMarker.getLngLat();return[l.lat,l.lng]}if(live.on&&live.pts.length){const p=live.pts.at(-1);return[p[0],p[1]]}if(map){const c=map.getCenter();return[c.lat,c.lng]}return null}
 function gpsOnce(){return new Promise((ok,ko)=>{if(!navigator.geolocation)return ko();navigator.geolocation.getCurrentPosition(p=>ok([p.coords.latitude,p.coords.longitude]),ko,{enableHighAccuracy:true,timeout:10000,maximumAge:60000})})}
 
@@ -6072,7 +6080,7 @@ async function useRoute(){
 /* Mis rutas */
 function openRoutes(pick){
   const list=store.get('routes',[]);
-  $('routesList').innerHTML=(pick?'':'<button class="btn btn-line" style="width:100%;margin-bottom:12px" onclick="closeSheets();pickFile()">📂 Subir una ruta GPX</button>')+(list.length?list.map(r=>`<div class="li" style="cursor:default;margin-bottom:10px"><span class="em">${r.mode==='loop'?'⟲':r.mode==='stages'?'🧭':'🗺️'}</span><div><b>${esc(r.name)}</b><small>${r.km} km · +${r.up} m · ${hm(r.mins)}</small></div>
+  $('routesList').innerHTML=(pick?'':'<button class="btn btn-line" style="width:100%;margin-bottom:12px" onclick="closeSheets();pickFile()">📂 Subir una ruta GPX</button><button class="btn btn-line" style="width:100%;margin:-4px 0 12px" onclick="closeSheets();ghPlan()">🧭 Planificar en GraphHopper (MTB)</button>')+(list.length?list.map(r=>`<div class="li" style="cursor:default;margin-bottom:10px"><span class="em">${r.mode==='loop'?'⟲':r.mode==='stages'?'🧭':'🗺️'}</span><div><b>${esc(r.name)}</b><small>${r.km} km · +${r.up} m · ${hm(r.mins)}</small></div>
     <div style="display:flex;flex-direction:column;gap:6px">${pick?`<button class="mini ok" onclick="pickSaved(${jsq(r.id)})">Elegir</button>`:`<button class="mini" onclick="viewSaved(${jsq(r.id)})">Ver</button><button class="mini" onclick="publishRoute(store.get('routes',[]).find(x=>x.id===${jsq(r.id)}))">🌍</button>`}<button class="mini" style="color:var(--red)" onclick="delSaved(${jsq(r.id)},${pick?1:0})">Borrar</button></div></div>`).join('')
     :`<div class="empty">Aún no tienes rutas guardadas.<br>Planifica una y pulsa "Guardar".</div>`);
   openSheet('sh-routes');
