@@ -1,8 +1,10 @@
-// VillorvinAdventure — Worker de avisos con la app cerrada (Cloudflare) · v3.5
+// VillorvinAdventure — Worker de avisos con la app cerrada (Cloudflare) · v3.6
 // Nombre del Worker: villorvinadventure-push  →  https://villorvinadventure-push.pedrosaborrego.workers.dev
 // Secretos (Settings → Variables and Secrets), los mismos de siempre:
 //   FIREBASE_SA  = el contenido COMPLETO del archivo JSON de la cuenta de servicio de Firebase
 //   FIREBASE_KEY = la "Browser key" (apiKey) de Firebase: AIzaSy...
+//   ORG_EMAILS   = correos de la organización que pueden mandar avisos desde la consola, separados por comas
+//                  (se guardan como secreto para que no queden escritos en el código público)
 // Disparador programado (Settings → Triggers → Cron Triggers):  */5 * * * *
 // Comprobación (no enseña los secretos): abre en el navegador  …workers.dev/?diag
 //
@@ -38,8 +40,8 @@ const ALERTS = {
   late: 'VA PARA ALLÁ', join: 'YA ESTÁ CON VOSOTROS'
 };
 const URGENT = ['help', 'fall', 'lost'];
-// Cuentas de Google de la organización (las mismas que en las reglas de Firebase: isVAOrg)
-const ORG_EMAILS = ['pedrosaborrego@gmail.com', 'villorvinadventure@gmail.com'];
+// Cuentas de Google de la organización: secreto ORG_EMAILS de Cloudflare (las mismas que isVAOrg en las reglas de Firebase)
+const orgEmails = env => String(env.ORG_EMAILS || '').toLowerCase().split(/[,;\s]+/).filter(Boolean);
 
 export default {
   async fetch(req, env, ctxCf) {
@@ -53,7 +55,7 @@ export default {
     const out = (o, s = 200) => new Response(JSON.stringify(o), { status: s, headers: { ...cors, 'Content-Type': 'application/json' } });
     if (req.method === 'OPTIONS') return new Response(null, { headers: cors });
     if (req.method === 'GET' && new URL(req.url).searchParams.has('diag')) return out(await diag(env));
-    if (req.method !== 'POST') return out({ ok: true, info: 'villorvinadventure-push v3.5 activo' });
+    if (req.method !== 'POST') return out({ ok: true, info: 'villorvinadventure-push v3.6 activo' });
     const C = ctx(env);
     try {
       const b = await req.json();
@@ -130,7 +132,7 @@ async function sos(C, uid, { club, msg }) {
 
 /* ---------------- Desde la consola: novedades, próximos viajes, publicidad, aviso general y respuestas ---------------- */
 async function orgEvent(C, user, b, from) {
-  if (!user.email || user.emailVerified !== true || !ORG_EMAILS.includes(String(user.email).toLowerCase())) throw fail('solo la organización', 403);
+  if (!user.email || user.emailVerified !== true || !orgEmails(C.env).includes(String(user.email).toLowerCase())) throw fail('solo la organización', 403);
   const col = String(b.col || ''), id = String(b.id || '');
   if (!['va_news', 'va_rutas', 'va_config', 'va_support'].includes(col) || !/^[A-Za-z0-9_-]{1,60}$/.test(id)) throw fail('datos', 400);
   if (col === 'va_config' && id !== 'aviso') throw fail('datos', 400);
@@ -442,9 +444,11 @@ function parseSA(env) {
 }
 // ?diag → revisa los secretos y la conexión con Firebase, sin enseñarlos
 async function diag(env) {
-  const r = { worker: 'v3.5' };
+  const r = { worker: 'v3.6' };
   const k = String(env.FIREBASE_KEY || '');
   r.FIREBASE_KEY = !k ? 'FALTA' : k.startsWith('AIza') ? 'ok' : 'MAL: tiene que empezar por AIza';
+  const oe = orgEmails(env);
+  r.ORG_EMAILS = oe.length ? 'ok (' + oe.length + ' correos)' : 'FALTA';
   let sa = null;
   try { sa = parseSA(env); r.FIREBASE_SA = 'ok'; r.proyecto_de_la_cuenta = sa.project_id; r.proyecto_correcto = sa.project_id === PROJECT; }
   catch (e) { r.FIREBASE_SA = 'ERROR: ' + e.message; }
@@ -455,7 +459,7 @@ async function diag(env) {
       r.base_de_datos = t.ok || t.status === 404 ? 'ok' : 'ERROR ' + t.status + (t.status === 403 ? ' (la cuenta de servicio no es de este proyecto)' : '');
     } catch (e) { r.permiso_google = 'ERROR: ' + (e && e.message || e); }
   }
-  r.todo_bien = r.FIREBASE_KEY === 'ok' && r.FIREBASE_SA === 'ok' && r.proyecto_correcto === true && r.permiso_google === 'ok' && r.base_de_datos === 'ok';
+  r.todo_bien = r.FIREBASE_KEY === 'ok' && oe.length > 0 && r.FIREBASE_SA === 'ok' && r.proyecto_correcto === true && r.permiso_google === 'ok' && r.base_de_datos === 'ok';
   return r;
 }
 
