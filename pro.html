@@ -1163,7 +1163,7 @@ button,.btn,.li,.chip,.mini,.lvcatch,[onclick]{touch-action:manipulation;-webkit
     <button class="li" onclick="deleteAccount()"><span class="em">🗑️</span><div><b style="color:var(--red)">Borrar mi cuenta y mis datos</b><small>No se puede deshacer</small></div><svg class="i chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></button>
   </div>
   <div class="shopline" id="shopLine" style="display:none"></div>
-  <p style="color:var(--txt2);font-size:13px;text-align:center;margin-top:20px">VillorvinAdventure Pro · versión 3.3</p>
+  <p style="color:var(--txt2);font-size:13px;text-align:center;margin-top:20px">VillorvinAdventure Pro · versión 3.3.1</p>
 </section>
 
 <!-- ============ BARRA INFERIOR ============ -->
@@ -2241,11 +2241,28 @@ function publishRide(){
     setTimeout(()=>{openRide(id);if(changed&&names(old).length>1&&confirm('Has cambiado día, hora o lugar. Los apuntados reciben un aviso en el móvil. ¿Avisar también por WhatsApp?'))notifyChange(id)},500);
     return;
   }
-  ref.set(r).then(()=>{if(r.open)syncOpen(ref.id,r);if(r.group)pushEv({t:'new',ride:ref.id})}).catch(netErr);
-  addPoints(20,{created:FV.increment(1)});
-  go('comunidad');closeSheets();
-  setTimeout(()=>openRide(ref.id),350);
-  toast('¡Salida publicada! +20 puntos');
+  // v3.3.1: espera la confirmación de Firebase antes de dar la salida por publicada (antes salía «publicada» aunque Firebase la rechazara)
+  if(publishRide.busy)return;publishRide.busy=1;const bt=$('pubBtnTxt');bt.textContent='Guardando…';
+  const fin=()=>{publishRide.busy=0;bt.textContent='Publicar salida'};
+  const okPub=pend=>{fin();addPoints(20,{created:FV.increment(1)});go('comunidad');closeSheets();setTimeout(()=>openRide(ref.id),350);
+    toast(pend?'Sin cobertura: la salida se publicará al recuperar conexión':'¡Salida publicada! +20 puntos')};
+  const w=ref.set(r);let to;
+  Promise.race([w,new Promise((_,ko)=>{to=setTimeout(()=>ko({code:'va-timeout'}),15000)})])
+    .then(()=>{clearTimeout(to);okPub(false);if(r.open)syncOpen(ref.id,r);if(r.group)pushEv({t:'new',ride:ref.id})})
+    .catch(e=>{clearTimeout(to);
+      if(e&&e.code==='va-timeout'){okPub(true);w.then(()=>{if(r.open)syncOpen(ref.id,r);if(r.group)pushEv({t:'new',ride:ref.id})}).catch(e2=>{rideErr(e2,r)});return}
+      fin();rideErr(e,r)});
+}
+// v3.3.1: explica por qué Firebase no deja publicar la salida (para poder arreglarlo)
+async function rideErr(e,r){console.error(e);const c=e&&e.code||'';
+  if(!/permission/.test(c)){alert('No se ha podido publicar la salida.\n(Código: '+(c||e&&e.message||'desconocido')+')');return}
+  let why='';
+  try{if(r.group){const s=await db.collection('groups').doc(r.group).get();const g=s.exists?s.data():null;
+    if(!g)why='El club con el que intentas publicarla ya no existe.';
+    else if(!(g.members||{})[uid])why='Firebase no te tiene como miembro del club «'+g.name+'». Sal del club y vuelve a entrar con su código.';
+    else if(g.suspended)why='El club «'+g.name+'» está en pausa.'}}catch(_){}
+  try{const u=(await db.collection('users').doc(uid).get()).data();if(u&&u.banned)why='Tu cuenta está bloqueada.'}catch(_){}
+  alert('No se ha podido publicar la salida.\n\n'+(why||'Firebase la ha rechazado.')+'\n\nHaz una captura de este mensaje y envíala a soporte.\n(Código: '+c+' · club '+(r.group||'—')+' · '+r.date+' '+r.hour+' · nombre '+String(r.by).length+')');
 }
 
 /* ===== Puntos y ranking ===== */
