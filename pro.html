@@ -1163,7 +1163,7 @@ button,.btn,.li,.chip,.mini,.lvcatch,[onclick]{touch-action:manipulation;-webkit
     <button class="li" onclick="deleteAccount()"><span class="em">🗑️</span><div><b style="color:var(--red)">Borrar mi cuenta y mis datos</b><small>No se puede deshacer</small></div><svg class="i chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></button>
   </div>
   <div class="shopline" id="shopLine" style="display:none"></div>
-  <p style="color:var(--txt2);font-size:13px;text-align:center;margin-top:20px">VillorvinAdventure Pro · versión 3.2</p>
+  <p style="color:var(--txt2);font-size:13px;text-align:center;margin-top:20px">VillorvinAdventure Pro · versión 3.3</p>
 </section>
 
 <!-- ============ BARRA INFERIOR ============ -->
@@ -7676,7 +7676,8 @@ function vaRutas(){
      <small style="display:block;color:var(--txt2);margin:4px 0 6px">${r.date?'📅 '+esc(String(r.date).split('-').reverse().join('/'))+' · ':''}${days.length>1?days.length+' días · ':''}${km?fmtNum(km,0)+' km':''}</small>
      ${r.info?`<p style="font-size:14.5px;line-height:1.45;white-space:pre-line;margin-bottom:8px">${esc(r.info)}</p>`:''}
      ${days.map((d,i)=>`<div class="li" style="cursor:default;margin-bottom:6px"><span class="em">${days.length>1?i+1:'🚴'}</span><div><b>${esc(d.title||('Día '+(i+1)))}</b><small>${d.km?esc(d.km)+' km':''}</small></div>${vaUrl(d.gpx)?`<a class="mini" style="text-decoration:none" href="${esc(vaUrl(d.gpx))}" target="_blank" rel="noopener">⬇️ Track</a>`:''}</div>`).join('')}
-     ${vaUrl(r.pdf)?`<a class="btn btn-lime" style="text-decoration:none;margin-top:6px" href="${esc(vaUrl(r.pdf))}" target="_blank" rel="noopener">📄 Descargar PDF con toda la información</a>`:''}</div>`}).join('')
+     ${vaUrl(r.pdf)?`<a class="btn btn-lime" style="text-decoration:none;margin-top:6px" href="${esc(vaUrl(r.pdf))}" target="_blank" rel="noopener">📄 Descargar PDF con toda la información</a>`:''}
+     ${vaUrl(r.form)?`<a class="btn" style="text-decoration:none;margin-top:8px;background:#F59E0B;color:#1c1300;font-weight:800" href="${esc(vaUrl(r.form))}" target="_blank" rel="noopener">📝 Inscríbete aquí</a>`:''}</div>`}).join('')
     :'<div class="empty">Todavía no hay rutas publicadas.</div>')+'</div>';
   openRideId=null;if(!$('sh-ride').classList.contains('show'))openSheet('sh-ride');
 }

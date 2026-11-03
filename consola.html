@@ -99,7 +99,7 @@ tr:last-child td{border-bottom:none}
     </div>
     <nav class="tabs" id="tabs" aria-label="Apartados de la consola"></nav>
     <main id="view"></main>
-    <p class="foot">Asistencia VillorvinAdventure · 610 200 580 · <a href="https://www.villorvinadventure.com/inicio" target="_blank" rel="noopener">villorvinadventure.com</a> · Consola versión 3.2</p>
+    <p class="foot">Asistencia VillorvinAdventure · 610 200 580 · <a href="https://www.villorvinadventure.com/inicio" target="_blank" rel="noopener">villorvinadventure.com</a> · Consola versión 3.3</p>
   </div>
 </div>
 <div id="toast" role="status" aria-live="polite"></div>
@@ -320,10 +320,10 @@ function vRutas(){
     <td><b>${esc(r.title)}</b>${r.info?`<div class="hint">${esc(String(r.info).slice(0,90))}${String(r.info).length>90?'…':''}</div>`:''}</td>
     <td>${r.date?esc(r.date.split('-').reverse().join('/')):'—'}</td><td>${(r.days||[]).length||1}</td>
     <td>${r.gp?`<span class="tag gp">${esc(gpName(r.gp)||'Grupeta borrada')}</span>`:'<span class="tag simple">Todos</span>'}</td>
-    <td>${safeUrl(r.pdf)?`<a href="${esc(safeUrl(r.pdf))}" target="_blank" rel="noopener">Ver PDF</a>`:'—'}</td>
+    <td>${safeUrl(r.pdf)?`<a href="${esc(safeUrl(r.pdf))}" target="_blank" rel="noopener">Ver PDF</a>`:'—'}${safeUrl(r.form)?`<div><a href="${esc(safeUrl(r.form))}" target="_blank" rel="noopener">📝 Inscripción</a></div>`:''}</td>
     <td><div class="acts"><button class="btn sm" onclick="rutaEdit(${jsq(r.id)})">✏️ Editar</button><button class="btn sm red" onclick="rutaDel(${jsq(r.id)})">🗑️</button></div></td></tr>`).join('')}</tbody></table></div>`:'<div class="empty">Todavía no hay rutas. Pulsa «Nueva ruta».</div>'}`;
 }
-function rutaNew(){S.editRuta={id:'',title:'',date:'',info:'',pdf:'',gp:'',days:[{title:'Día 1',km:'',gpx:''}]};render()}
+function rutaNew(){S.editRuta={id:'',title:'',date:'',info:'',pdf:'',form:'',gp:'',days:[{title:'Día 1',km:'',gpx:''}]};render()}
 function rutaEdit(id){const r=S.rutas.find(x=>x.id===id);if(!r)return;S.editRuta=JSON.parse(JSON.stringify({...r,days:(r.days&&r.days.length)?r.days:[{title:'Día 1',km:'',gpx:''}]}));render()}
 function rutaForm(r){
   return `<div class="box"><h2>${r.id?'Editar ruta':'Nueva ruta'}</h2>
@@ -333,6 +333,8 @@ function rutaForm(r){
    <label class="l" for="rI">Información</label><textarea class="inp" id="rI" maxlength="2000" placeholder="Punto de salida, hora, nivel, qué llevar, precio…">${esc(r.info||'')}</textarea>
    <label class="l" for="rP">Enlace del PDF con toda la información</label><input class="inp" id="rP" type="url" value="${esc(r.pdf||'')}" placeholder="https://drive.google.com/…">
    <p class="hint">Sube el PDF a tu Google Drive, pulsa «Compartir → Cualquier persona con el enlace» y pega aquí el enlace.</p>
+   <label class="l" for="rF">Enlace de inscripción (opcional)</label><input class="inp" id="rF" type="url" value="${esc(r.form||'')}" placeholder="https://docs.google.com/forms/…">
+   <p class="hint">Si lo pones, en la app sale el botón «📝 Inscríbete aquí» debajo del PDF (por ejemplo, un formulario de Google).</p>
    <label class="l">Días y tracks</label><div id="rDays">${r.days.map((d,i)=>`<div class="day"><div class="row"><b style="min-width:60px">Día ${i+1}</b>
      <input class="inp" id="dT${i}" maxlength="60" value="${esc(d.title||'')}" placeholder="Etapa (ej. Cervera – Guissona)">
      <input class="inp" id="dK${i}" maxlength="8" inputmode="decimal" value="${esc(d.km||'')}" placeholder="km" style="flex:0 1 90px">
@@ -342,15 +344,16 @@ function rutaForm(r){
    <label class="l" style="display:flex;gap:8px;align-items:center;cursor:pointer;margin-top:14px"><input type="checkbox" id="rPush"${r.id?'':' checked'}> 📲 Avisar al móvil como «Próximo viaje» (aunque tengan la app cerrada)</label>
    <div class="row" style="margin-top:18px"><button class="btn pri" onclick="rutaSave()">💾 Guardar ruta</button><button class="btn" onclick="S.editRuta=null;render()">Cancelar</button></div></div>`;
 }
-function rutaRead(){const r=S.editRuta;r.title=$('rT').value.trim().slice(0,80);r.date=$('rD').value||'';r.gp=$('rG').value||'';r.info=$('rI').value.trim().slice(0,2000);r.pdf=$('rP').value.trim().slice(0,500);
+function rutaRead(){const r=S.editRuta;r.title=$('rT').value.trim().slice(0,80);r.date=$('rD').value||'';r.gp=$('rG').value||'';r.info=$('rI').value.trim().slice(0,2000);r.pdf=$('rP').value.trim().slice(0,500);r.form=(($('rF')||{}).value||'').trim().slice(0,500);
   r.days=r.days.map((d,i)=>({title:($('dT'+i).value||'').trim().slice(0,60),km:($('dK'+i).value||'').trim().slice(0,8),gpx:($('dG'+i).value||'').trim().slice(0,500)}));return r}
 function dayAdd(){const r=rutaRead();r.days.push({title:'Día '+(r.days.length+1),km:'',gpx:''});$('view').innerHTML=rutaForm(r)}
 function dayDel(i){const r=rutaRead();r.days.splice(i,1);$('view').innerHTML=rutaForm(r)}
 async function rutaSave(){
   const r=rutaRead();if(!r.title){toast('Pon un nombre a la ruta');return}
   if(r.pdf&&!safeUrl(r.pdf)){toast('El enlace del PDF tiene que empezar por https://');return}
+  if(r.form&&!safeUrl(r.form)){toast('El enlace de inscripción tiene que empezar por https://');return}
   if(r.days.some(d=>d.gpx&&!safeUrl(d.gpx))){toast('Los enlaces de los tracks tienen que empezar por https://');return}
-  const id=r.id||newId('r');const data={title:r.title,date:r.date,gp:r.gp,info:r.info,pdf:r.pdf,days:r.days.slice(0,14),t:Date.now()};
+  const id=r.id||newId('r');const data={title:r.title,date:r.date,gp:r.gp,info:r.info,pdf:r.pdf,form:r.form||'',days:r.days.slice(0,14),t:Date.now()};
   const push=$('rPush')&&$('rPush').checked;
   try{await db.collection('va_rutas').doc(id).set(data);S.editRuta=null;toast('✅ Ruta guardada');render();if(push)orgPush('va_rutas',id)}catch(e){fail(e)}
 }
@@ -426,7 +429,7 @@ async function restore(){
   const msg=$('rstMsg');msg.textContent='Restaurando…';let n=0,err=0;
   const put=async(col,l,pick)=>{for(const x of (l||[])){if(!x||!x.id||!/^[A-Za-z0-9_-]{1,80}$/.test(x.id))continue;try{await db.collection(col).doc(x.id).set(pick(x));n++}catch(e){err++}}};
   await put('va_members',d.members,x=>({name:String(x.name||'').slice(0,40),tel:String(x.tel||'').slice(0,20),t:+x.t||Date.now(),app:x.app==='pro'?'pro':'simple'}));
-  await put('va_rutas',d.rutas,x=>({title:String(x.title||'').slice(0,80),date:String(x.date||''),gp:String(x.gp||''),info:String(x.info||'').slice(0,2000),pdf:String(x.pdf||'').slice(0,500),days:(x.days||[]).slice(0,14).map(y=>({title:String(y.title||'').slice(0,60),km:String(y.km||'').slice(0,8),gpx:String(y.gpx||'').slice(0,500)})),t:+x.t||Date.now()}));
+  await put('va_rutas',d.rutas,x=>({title:String(x.title||'').slice(0,80),date:String(x.date||''),gp:String(x.gp||''),info:String(x.info||'').slice(0,2000),pdf:String(x.pdf||'').slice(0,500),form:String(x.form||'').slice(0,500),days:(x.days||[]).slice(0,14).map(y=>({title:String(y.title||'').slice(0,60),km:String(y.km||'').slice(0,8),gpx:String(y.gpx||'').slice(0,500)})),t:+x.t||Date.now()}));
   await put('va_news',d.news,x=>({title:String(x.title||'').slice(0,80),text:String(x.text||'').slice(0,1500),link:String(x.link||'').slice(0,500),gp:String(x.gp||''),kind:['trip','promo'].includes(x.kind)?x.kind:'news',t:+x.t||Date.now()}));
   await put('va_support',d.support,x=>{const o={uid:String(x.uid||''),name:String(x.name||'').slice(0,40),tel:String(x.tel||'').slice(0,20),text:String(x.text||'').slice(0,1500),t:+x.t||Date.now()};if(x.reply){o.reply=String(x.reply).slice(0,1500);o.replyAt=+x.replyAt||Date.now();o.seen=!!x.seen}return o});
   if(d.aviso){try{await db.collection('va_config').doc('aviso').set({text:String(d.aviso.text||'').slice(0,280),active:!!d.aviso.active,t:+d.aviso.t||Date.now()});n++}catch(e){err++}}
