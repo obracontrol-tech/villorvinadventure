@@ -99,7 +99,7 @@ tr:last-child td{border-bottom:none}
     </div>
     <nav class="tabs" id="tabs" aria-label="Apartados de la consola"></nav>
     <main id="view"></main>
-    <p class="foot">Asistencia VillorvinAdventure · 610 200 580 · <a href="https://www.villorvinadventure.com/inicio" target="_blank" rel="noopener">villorvinadventure.com</a> · Consola versión 3.8.1</p>
+    <p class="foot">Asistencia VillorvinAdventure · 610 200 580 · <a href="https://www.villorvinadventure.com/inicio" target="_blank" rel="noopener">villorvinadventure.com</a> · Consola versión 3.8.2</p>
   </div>
 </div>
 <div id="toast" role="status" aria-live="polite"></div>
@@ -165,10 +165,12 @@ auth.onAuthStateChanged(async u=>{
 /* La comunidad: la cuenta de Google de la consola tiene que ser la misma que la del administrador en la app */
 async function loadClub(myUid){
   try{
-    const us=await db.collection('users').doc(myUid).get();let C=us.exists?us.data().group:null;
-    // v3.8 — si esta cuenta no está unida a la comunidad, se busca por su nombre (solo puede la cuenta del propietario)
-    if(!C){try{const k=localStorage.getItem('va_cons_club')||'';if(/^[A-Z0-9]{6}$/.test(k))C=k}catch(e){}}
-    if(!C){try{const q=await db.collection('groups').get();const d=q.docs.find(x=>/villorvin/i.test(String(x.data().name||'')));if(d){C=d.id;S.clubFound=true}}catch(e){}}
+    // v3.8.2 — orden: 1º el código escrito en esta consola; 2º la comunidad de la cuenta; 3º buscar «VillorvinAdventure».
+    // Tras «Cambiar de comunidad» no se elige sola: se pide el código.
+    let k='',ask=false;try{k=localStorage.getItem('va_cons_club')||'';ask=localStorage.getItem('va_cons_ask')==='1'}catch(e){}
+    let C=/^[A-Z0-9]{6}$/.test(k)?k:null;
+    if(!C&&!ask){const us=await db.collection('users').doc(myUid).get();C=us.exists?us.data().group:null}
+    if(!C&&!ask){try{const q=await db.collection('groups').get();const d=q.docs.find(x=>/villorvin/i.test(String(x.data().name||'')));if(d){C=d.id;S.clubFound=true}}catch(e){}}
     if(!C){S.club=null;S.clubId=null;render();return}
     S.clubId=C;
     S.subs.push(db.collection('groups').doc(C).onSnapshot(s=>{S.club=s.exists?{id:s.id,...s.data()}:null;
@@ -307,7 +309,13 @@ function clubWarn(){
 async function setConsClub(){const c=(($('ccIn')||{}).value||'').trim().toUpperCase().replace(/[^A-Z0-9]/g,'');
   if(c.length!==6){toast('El código tiene 6 letras o números');return}
   try{const d=await db.collection('groups').doc(c).get();if(!d.exists){alert('No existe ninguna comunidad con el código «'+c+'». Revísalo letra a letra.');return}
-    try{localStorage.setItem('va_cons_club',c)}catch(e){}toast('✅ Comunidad «'+(d.data().name||c)+'» cargada');loadClub(firebase.auth().currentUser.uid)}catch(e){fail(e)}}
+    try{localStorage.setItem('va_cons_club',c);localStorage.removeItem('va_cons_ask')}catch(e){}toast('✅ Comunidad «'+(d.data().name||c)+'» cargada');loadClub(firebase.auth().currentUser.uid)}catch(e){fail(e)}}
+/* v3.8.2 — Limpiar: quitar el código de una grupeta y cambiar de comunidad en la consola */
+async function gpCodeDel(id){const g=(S.club.grupetas||{})[id];if(!g)return;
+  if(!confirm('¿Quitar el código de «'+g.name+'»?\n\nLa grupeta se queda, con sus ciclistas, pero cualquiera de la comunidad podrá verla y apuntarse sin código.'))return;
+  try{await clubRef().update({['grupetas.'+id+'.code']:FV.delete()});toast('Código quitado')}catch(e){fail(e)}}
+function consClubChange(){if(!confirm('¿Cambiar de comunidad?\n\nLa consola olvidará «'+(S.club?S.club.name:'')+'» en este ordenador y te pedirá otro código.'))return;
+  try{localStorage.removeItem('va_cons_club');localStorage.setItem('va_cons_ask','1')}catch(e){}S.subs.forEach(x=>{try{x()}catch(e){}});location.reload()}
 /* v3.8 — 🔑 Códigos de la comunidad y de cada grupeta, siempre a la vista */
 function copyTxt(t){try{navigator.clipboard.writeText(t).then(()=>toast('📋 Copiado: '+t)).catch(()=>prompt('Copia el código:',t))}catch(e){prompt('Copia el código:',t)}}
 function codesBox(){
@@ -316,11 +324,11 @@ function codesBox(){
   return `<div class="box" style="border:2px solid #4DA3FF"><h2>🔑 Códigos</h2>
    <div class="row" style="align-items:center;gap:12px;flex-wrap:wrap;margin-top:6px"><div><div class="hint">Código de la comunidad · ${esc(g.name)}</div><b style="font-size:32px;letter-spacing:6px">${esc(g.id)}</b></div>
     <button class="btn sm" onclick="copyTxt(${jsq(g.id)})">📋 Copiar</button><a class="btn sm" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent(wa)}">💬 Enviar por WhatsApp</a></div>
-   <p class="hint" style="margin-top:6px">Con este código el ciclista entra en la comunidad desde la app <b>Pro</b>.</p>
-   <div class="tbl" style="margin-top:10px"><table><thead><tr><th>Grupeta</th><th>Código</th><th>Creada por</th><th>Ciclistas</th></tr></thead><tbody>
+   <p class="hint" style="margin-top:6px">Con este código el ciclista entra en la comunidad desde la app <b>Pro</b>. <button class="btn sm" style="margin-left:6px" onclick="consClubChange()">🔄 Cambiar de comunidad</button></p>
+   <div class="tbl" style="margin-top:10px"><table><thead><tr><th>Grupeta</th><th>Código</th><th>Creada por</th><th>Ciclistas</th><th>Limpiar</th></tr></thead><tbody>
    ${L.length?L.map(x=>{const n=Object.entries(g.gm||{}).filter(([k,l])=>Array.isArray(l)&&l.includes(x.id)&&mem[k]).length;
-     return `<tr><td><b>${esc(x.name)}</b></td><td>${x.code?`<b style="letter-spacing:3px">${esc(x.code)}</b> <button class="btn sm" onclick="copyTxt(${jsq(x.code)})">📋</button>`:'<span class="hint">Sin código · se apuntan directamente</span>'}</td><td>${x.by?esc(mem[x.by]||'Ciclista'):'VillorvinAdventure'}</td><td>${n}</td></tr>`}).join('')
-     :'<tr><td colspan="4" class="empty">Todavía no hay grupetas.</td></tr>'}</tbody></table></div></div>`;
+     return `<tr><td><b>${esc(x.name)}</b></td><td>${x.code?`<b style="letter-spacing:3px">${esc(x.code)}</b> <button class="btn sm" onclick="copyTxt(${jsq(x.code)})">📋</button>`:'<span class="hint">Sin código · se apuntan directamente</span>'}</td><td>${x.by?esc(mem[x.by]||'Ciclista'):'VillorvinAdventure'}</td><td>${n}</td><td><div class="acts">${x.code?`<button class="btn sm" onclick="gpCodeDel(${jsq(x.id)})" title="Quitar el código: cualquiera de la comunidad podrá apuntarse">🔓 Quitar código</button>`:''}<button class="btn sm red" onclick="gpDel(${jsq(x.id)})">🗑️ Eliminar</button></div></td></tr>`}).join('')
+     :'<tr><td colspan="5" class="empty">Todavía no hay grupetas.</td></tr>'}</tbody></table></div></div>`;
 }
 function vGrupetas(){
   const cb=codesBox();const w=clubWarn();if(w)return cb+w;
