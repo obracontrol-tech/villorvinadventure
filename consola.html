@@ -165,7 +165,9 @@ auth.onAuthStateChanged(async u=>{
 /* La comunidad: la cuenta de Google de la consola tiene que ser la misma que la del administrador en la app */
 async function loadClub(myUid){
   try{
-    const us=await db.collection('users').doc(myUid).get();const C=us.exists?us.data().group:null;
+    const us=await db.collection('users').doc(myUid).get();let C=us.exists?us.data().group:null;
+    // v3.8 — si esta cuenta no está unida a la comunidad, se busca por su nombre (solo puede la cuenta del propietario)
+    if(!C){try{const q=await db.collection('groups').get();const d=q.docs.find(x=>/villorvin/i.test(String(x.data().name||'')));if(d){C=d.id;S.clubFound=true}}catch(e){}}
     if(!C){S.club=null;S.clubId=null;render();return}
     S.clubId=C;
     S.subs.push(db.collection('groups').doc(C).onSnapshot(s=>{S.club=s.exists?{id:s.id,...s.data()}:null;
@@ -296,11 +298,25 @@ function clubWarn(){
   if(!S.isAdm)return `<div class="warn">⚠️ Esta cuenta está en la comunidad <b>${esc(S.club.name)}</b>, pero no es administradora. Pide al creador de la comunidad que te haga administrador.</div>`;
   return '';
 }
+/* v3.8 — 🔑 Códigos de la comunidad y de cada grupeta, siempre a la vista */
+function copyTxt(t){try{navigator.clipboard.writeText(t).then(()=>toast('📋 Copiado: '+t)).catch(()=>prompt('Copia el código:',t))}catch(e){prompt('Copia el código:',t)}}
+function codesBox(){
+  if(!S.club)return '';const g=S.club,L=gpList(),mem=g.members||{};
+  const wa='🚴 Código de la comunidad '+g.name+' en la app VillorvinAdventure: *'+g.id+'*\n\nEn la app: Comunidad → «🔗 Ya tengo el código» (o «Entrar en la comunidad») y escríbelo.';
+  return `<div class="box" style="border:2px solid #4DA3FF"><h2>🔑 Códigos</h2>
+   <div class="row" style="align-items:center;gap:12px;flex-wrap:wrap;margin-top:6px"><div><div class="hint">Código de la comunidad · ${esc(g.name)}</div><b style="font-size:32px;letter-spacing:6px">${esc(g.id)}</b></div>
+    <button class="btn sm" onclick="copyTxt(${jsq(g.id)})">📋 Copiar</button><a class="btn sm" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent(wa)}">💬 Enviar por WhatsApp</a></div>
+   <p class="hint" style="margin-top:6px">Con este código el ciclista entra en la comunidad desde la app <b>Pro</b>.</p>
+   <div class="tbl" style="margin-top:10px"><table><thead><tr><th>Grupeta</th><th>Código</th><th>Creada por</th><th>Ciclistas</th></tr></thead><tbody>
+   ${L.length?L.map(x=>{const n=Object.entries(g.gm||{}).filter(([k,l])=>Array.isArray(l)&&l.includes(x.id)&&mem[k]).length;
+     return `<tr><td><b>${esc(x.name)}</b></td><td>${x.code?`<b style="letter-spacing:3px">${esc(x.code)}</b> <button class="btn sm" onclick="copyTxt(${jsq(x.code)})">📋</button>`:'<span class="hint">Sin código · se apuntan directamente</span>'}</td><td>${x.by?esc(mem[x.by]||'Ciclista'):'VillorvinAdventure'}</td><td>${n}</td></tr>`}).join('')
+     :'<tr><td colspan="4" class="empty">Todavía no hay grupetas.</td></tr>'}</tbody></table></div></div>`;
+}
 function vGrupetas(){
-  const w=clubWarn();if(w)return w;
+  const cb=codesBox();const w=clubWarn();if(w)return cb+w;
   const L=gpList();const mem=Object.entries(S.club.members||{}).sort((a,b)=>String(a[1]).localeCompare(String(b[1])));
   const miss=VA_GPS.filter(([n])=>!L.some(g=>g.name===n));
-  return `<div class="box"><h2>Club ${esc(S.club.name)} · código <span style="letter-spacing:2px">${esc(S.club.id)}</span></h2><p class="hint">${mem.length} miembros en la comunidad. Cada ciclista puede estar en varias grupetas.</p>
+  return cb+`<div class="box"><h2>Comunidad ${esc(S.club.name)}</h2><p class="hint">${mem.length} miembros en la comunidad. Cada ciclista puede estar en varias grupetas.</p>
    ${miss.length?`<button class="btn pri" style="margin-top:10px" onclick="gpCreateVA()">➕ Crear ${miss.map(m=>m[0]).join(', ')}</button>`:''}
    <div class="row" style="margin-top:10px"><input class="inp" id="gpNew" maxlength="30" placeholder="Otra grupeta (nombre)" style="flex:1 1 200px;width:auto"><button class="btn" onclick="gpAdd()">➕ Añadir</button></div></div>
   <div class="grid2">${L.map(g=>{const ids=Object.entries(S.club.gm||{}).filter(([k,l])=>Array.isArray(l)&&l.includes(g.id)&&(S.club.members||{})[k]).map(([k])=>k);
