@@ -907,6 +907,8 @@ button,.btn,.li,.chip,.mini,.lvcatch,[onclick]{touch-action:manipulation;-webkit
 .r3-lbl i{display:block;width:2px;height:30px;background:rgba(11,20,34,.9)}
 #vaBox .plc small{color:#C9D6EA!important}
 html:not(.rs-simple) .rs-sonly{display:none!important}
+.ubadge{display:inline-grid;place-items:center;min-width:20px;height:20px;padding:0 6px;margin-left:6px;border-radius:99px;background:#EF4444;color:#fff;font-size:12px;font-weight:800;line-height:1;vertical-align:2px}
+.tab.hasUnread{position:relative}.tab.hasUnread::after{content:"";position:absolute;top:6px;right:calc(50% - 18px);width:10px;height:10px;border-radius:50%;background:#EF4444;box-shadow:0 0 0 2px var(--bg)}
 </style>
 </head>
 <body>
@@ -1175,7 +1177,7 @@ html:not(.rs-simple) .rs-sonly{display:none!important}
     <button class="li" onclick="deleteAccount()"><span class="em">🗑️</span><div><b style="color:var(--red)">Borrar mi cuenta y mis datos</b><small>No se puede deshacer</small></div><svg class="i chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></button>
   </div>
   <div class="shopline" id="shopLine" style="display:none"></div>
-  <p style="color:var(--txt2);font-size:13px;text-align:center;margin-top:20px">VillorvinAdventure Pro · versión 3.8.1</p>
+  <p style="color:var(--txt2);font-size:13px;text-align:center;margin-top:20px">VillorvinAdventure Pro · versión 3.9.0</p>
 </section>
 
 <!-- ============ BARRA INFERIOR ============ -->
@@ -2578,7 +2580,7 @@ function gpListHTML(adm){
   if(!L.length)return `<div class="empty" style="margin-bottom:10px">Aún no hay grupetas. ¡Crea la primera!</div>`;
   return L.map(x=>{const on=mine.includes(x.id),own=gpOwn(x),nm=gpMembers(x.id);
     return `<div class="li gprow" style="cursor:default;margin-bottom:8px;align-items:flex-start${on?';border-color:var(--lime)':''}"><span class="em">${GP_ICO[x.mod]||'🚴'}</span><div style="flex:1;min-width:0"><b>${esc(x.name)}</b><small>${[x.mod,x.lvl].filter(Boolean).map(esc).join(' · ')} · ${nm.length} ${nm.length===1?'ciclista':'ciclistas'}${x.code?'':' · ⛰️ de VillorvinAdventure'}${own?' · 👑 la creaste tú':''}</small>${on&&nm.length?`<small style="display:block;color:var(--txt);margin-top:2px">👥 ${nm.map(esc).join(', ')}</small>`:''}${x.code&&(on||own)?`<small style="display:block;margin-top:4px">🔑 Código: <b style="color:var(--lime);letter-spacing:.12em">${esc(x.code)}</b></small>`:''}
-     <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">${on?`<button class="mini lime" onclick="openGpChat(${jsq(x.id)})">💬 Chat</button>`:''}${x.code&&(on||own)?`<button class="mini" onclick="gpShare(${jsq(x.id)})">📲 Invitar</button>`:''}${on?`<button class="mini" onclick="gpToggle(${jsq(x.id)})">Salir</button>`:x.code?'':`<button class="mini lime" onclick="gpToggle(${jsq(x.id)})">Unirme</button>`}${own?`<button class="mini" style="color:var(--red)" onclick="gpDelMine(${jsq(x.id)})" aria-label="Eliminar grupeta">🗑️</button>`:''}</div></div></div>`}).join('');
+     <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">${on?`<button class="mini lime" onclick="openGpChat(${jsq(x.id)})">💬 Chat${ubadge(unreadGp(x.id))}</button>`:''}${x.code&&(on||own)?`<button class="mini" onclick="gpShare(${jsq(x.id)})">📲 Invitar</button>`:''}${on?`<button class="mini" onclick="gpToggle(${jsq(x.id)})">Salir</button>`:x.code?'':`<button class="mini lime" onclick="gpToggle(${jsq(x.id)})">Unirme</button>`}${own?`<button class="mini" style="color:var(--red)" onclick="gpDelMine(${jsq(x.id)})" aria-label="Eliminar grupeta">🗑️</button>`:''}</div></div></div>`}).join('');
 }
 async function gpCreateMine(){
   if(!myGroup){toast('Entra primero en la comunidad');return}if(!ready())return;
@@ -2624,7 +2626,7 @@ function openGpChat(id){
   gpChat.unsub=db.collection('groups').doc(myGroup.id).collection('gpmsgs').where('gp','==',id).limit(300).onSnapshot(s=>{
     if(!$('gpChatList')){try{gpChat.unsub()}catch(e){}gpChat.unsub=null;return}
     gpChat.msgs=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(a.ts||0)-(b.ts||0)).slice(-150);renderGpChat();
-    store.set('gpSeen_'+id,Date.now());try{renderGroup()}catch(e){}
+    store.set('gpSeen_'+id,Date.now());try{renderGroup();const t=document.querySelector('.tab[data-tab="comunidad"]');if(t)t.classList.toggle('hasUnread',unreadAll()>0)}catch(e){}
   },e=>{console.warn('chat grupeta',e);const l=$('gpChatList');if(l)l.innerHTML='<div class="empty" style="padding:12px">No se pudo cargar el chat. Si acabas de actualizar, hay que publicar las reglas v3.5 en Firebase.</div>'});
 }
 function renderGpChat(){
@@ -2775,7 +2777,7 @@ function renderGroup(){
   if(!g){box.innerHTML=`<div class="empty"><svg class="i" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 4.5a3.5 3.5 0 0 1 0 7M21.5 20a6.5 6.5 0 0 0-4-6"/></svg>Todavía no estás en la comunidad VillorvinAdventure.<br><small style="color:var(--txt2)">Entra con el código que te da la organización y apúntate a tus grupetas.</small>
      <button class="btn btn-lime" style="max-width:280px" onclick="joinGroupAsk()">🔗 Entrar en la comunidad</button></div>`;return}
   const mine=grupetas().filter(x=>myGps().includes(x.id));
-  box.innerHTML=(mine.length?mine.map(x=>{const n=gpMembers(x.id).length;const nw=gpNew(x.id);return `<div class="li" onclick="openGpChat(${jsq(x.id)})" style="margin-bottom:8px;border-color:var(--lime)"><span class="em">${GP_ICO[x.mod]||'🚴'}</span><div><b>${esc(x.name)}</b><small>${[x.mod,x.lvl].filter(Boolean).map(esc).join(' · ')} · ${n} ${n===1?'ciclista':'ciclistas'} · 💬 chat${nw?' <b style="color:var(--lime)">· nuevo</b>':''}</small></div><svg class="i chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></div>`}).join('')
+  box.innerHTML=(mine.length?mine.map(x=>{const n=gpMembers(x.id).length;const nw=unreadGp(x.id);return `<div class="li" onclick="openGpChat(${jsq(x.id)})" style="margin-bottom:8px;border-color:var(--lime)"><span class="em">${GP_ICO[x.mod]||'🚴'}</span><div><b>${esc(x.name)}</b><small>${[x.mod,x.lvl].filter(Boolean).map(esc).join(' · ')} · ${n} ${n===1?'ciclista':'ciclistas'} · 💬 chat</small></div>${ubadge(nw)}<svg class="i chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></div>`}).join('')
     :`<div class="empty" style="padding:14px">Aún no estás en ninguna grupeta.<br><small style="color:var(--txt2)">Crea la tuya o entra con el código que te pase un compañero.</small></div><button class="btn btn-line" style="margin-bottom:8px" onclick="openGroup()">🏷️ Ver las grupetas de la comunidad</button>`)
    +`<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px"><button class="btn btn-line" onclick="gpCreateMine()">➕ Crear grupeta</button><button class="btn btn-line" onclick="gpJoinCode()">🔑 Tengo un código</button></div>`
    +(g.notice?.text?`<small style="display:block;margin-top:8px;color:var(--lime);font-weight:700">📣 ${esc(g.notice.text)}</small>`:'');
@@ -4937,17 +4939,30 @@ function watchClubTalk(C,subs){
   if(!C){renderClubTalk();return}
   const g=db.collection('groups').doc(C);
   subs.push(g.collection('polls').orderBy('ts','desc').limit(20).onSnapshot(s=>{clubPolls=s.docs.map(d=>({id:d.id,...d.data()}));renderClubTalk();if($('pollList'))renderPolls()},e=>console.warn('encuestas',e)));
-  subs.push(g.collection('msgs').orderBy('ts','desc').limit(1).onSnapshot(s=>{clubLast=s.docs[0]?{id:s.docs[0].id,...s.docs[0].data()}:null;renderClubTalk()},e=>console.warn('chat club',e)));
+  // VA 3.9 — mensajes sin leer: últimos 40 del chat general y últimos 150 de las grupetas
+  subs.push(g.collection('msgs').orderBy('ts','desc').limit(40).onSnapshot(s=>{const L=s.docs.map(d=>({id:d.id,...d.data()})).filter(m=>!/^(🆘 ALERTA|✅ RECIBIDO)/.test(String(m.text||'')));
+    window.clubRecent=L;clubLast=L[0]||null;unreadPaint()},e=>console.warn('chat club',e)));
+  subs.push(g.collection('gpmsgs').orderBy('ts','desc').limit(150).onSnapshot(s=>{window.gpRecent=s.docs.map(d=>d.data());unreadPaint()},e=>console.warn('chat grupetas',e)));
+}
+/* VA 3.9 — Aviso de mensajes sin leer en los botones de chat (general y de cada grupeta) */
+function unreadClub(){const C=me?.group;if(!C)return 0;const seen=store.get('cmSeen_'+C,0);return (window.clubRecent||[]).filter(m=>m.uid!==uid&&(m.ts||0)>seen).length}
+function unreadGp(id){const seen=store.get('gpSeen_'+id,0);return (window.gpRecent||[]).filter(m=>m.gp===id&&m.uid!==uid&&(m.ts||0)>seen).length}
+function unreadAll(){return unreadClub()+myGps().reduce((n,id)=>n+unreadGp(id),0)}
+const ubadge=n=>n?` <span class="ubadge" aria-label="${n} sin leer">${n>9?'9+':n}</span>`:'';
+function unreadPaint(){
+  try{renderClubTalk()}catch(e){}try{renderVA()}catch(e){}try{renderGroup()}catch(e){}
+  try{const t=document.querySelector('.tab[data-tab="comunidad"]');if(t)t.classList.toggle('hasUnread',unreadAll()>0)}catch(e){}
+  try{if($('sh-ride').classList.contains('show')&&$('rideBody').querySelector('.gprow'))openGroup()}catch(e){}
 }
 function renderClubTalk(){
   const blk=$('clubTalk'),box=$('clubTalkBox');if(!blk||!box)return;
   const C=me?.group;if(!C||!myGroup){blk.style.display='none';return}
   blk.style.display='block';
-  const seen=store.get('cmSeen_'+C,0),unread=clubLast&&clubLast.uid!==uid&&clubLast.ts>seen;
+  const unread=unreadClub();
   const open=clubPolls.filter(pollOpen),pend=open.filter(p=>myVote(p)==null);
   const last=clubLast?`${clubLast.uid===uid?'Tú':esc(String(clubLast.name||'').split(' ')[0])}: ${esc(String(clubLast.text).slice(0,60))}`:'Habla con todo la comunidad, sin depender de WhatsApp';
   const p0=pend[0]||open[0];
-  box.innerHTML=`<button class="li" style="margin-bottom:8px" onclick="openClubChat()"><span class="em">💬</span><div style="min-width:0"><b>Chat de la comunidad${unread?' <span class="tag lime" style="margin-left:6px">nuevo</span>':''}</b><small style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block">${last}</small></div><svg class="i chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></button>
+  box.innerHTML=`<button class="li" style="margin-bottom:8px" onclick="openClubChat()"><span class="em">💬</span><div style="min-width:0"><b>Chat de la comunidad${ubadge(unread)}</b><small style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block">${last}</small></div><svg class="i chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></button>
    <button class="li" onclick="openPolls()"><span class="em">📊</span><div><b>Encuestas${pend.length?' <span class="tag lime" style="margin-left:6px">'+pend.length+' por votar</span>':''}</b><small>${open.length?open.length+' abierta'+(open.length>1?'s':'')+' · toca para votar o crear una':'Decidid entre todos: hora, ruta, parada…'}</small></div><svg class="i chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></button>
    ${p0?`<div class="poll" style="margin-top:10px">${pollHTML(p0,true)}</div>`:''}`;
 }
@@ -5021,7 +5036,7 @@ function openClubChat(){
   clubChat.unsub=db.collection('groups').doc(C).collection('msgs').orderBy('ts','desc').limit(120).onSnapshot(s=>{
     if(!$('clubChatList')){try{clubChat.unsub()}catch(e){}clubChat.unsub=null;return}
     clubChat.msgs=s.docs.map(d=>({id:d.id,...d.data()})).filter(m=>!/^(🆘 ALERTA|✅ RECIBIDO)/.test(String(m.text||''))).reverse();renderClubChat();
-    store.set('cmSeen_'+C,Date.now());renderClubTalk();
+    store.set('cmSeen_'+C,Date.now());unreadPaint();
   },e=>{console.warn('chat club',e);const l=$('clubChatList');if(l)l.innerHTML='<div class="empty" style="padding:12px">No se pudo cargar el chat. Si acabas de actualizar, el administrador tiene que publicar las reglas v4.5.</div>'});
 }
 function renderClubChat(){
@@ -7801,7 +7816,7 @@ function renderVA(){
      <div style="display:flex;align-items:center;gap:12px">
       <div style="flex:1;min-width:0;text-align:center"><b style="display:block;font-size:17px">Comunidad VillorvinAdventure</b><small style="color:var(--txt2)">${n} ${n===1?'miembro':'miembros'} · ${vaOrg()?'🛡️ Eres de la organización':'Estás protegido por la organización'}</small></div></div>
      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px">
-      <button class="btn btn-line" style="grid-column:1/-1" onclick="openClubChat()">💬 Chat</button>
+      <button class="btn btn-line" style="grid-column:1/-1" onclick="openClubChat()">💬 Chat${ubadge(unreadClub())}</button>
       ${vaOrg()?`<button class="btn btn-lime" style="grid-column:1/-1" onclick="openClubAdmin('members')">🛡️ Panel de la organización</button>`:''}
       ${vaOrg()&&!store.get('push',0)?`<button class="btn" style="grid-column:1/-1;background:#F59E0B;color:#1c1300;font-weight:800" onclick="setPush(true).then(()=>renderVA())">🔔 Activa las alarmas con la app cerrada</button>`:''}
      </div></div>`;
