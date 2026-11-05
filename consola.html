@@ -137,7 +137,7 @@ async function orgPush(col,id){
 }
 
 /* Las tres grupetas de VillorvinAdventure */
-const VA_GPS=[['Rutas del club','Carretera','Medio'],['Salida libre','Mixta','Tranquilo'],['Family Members','Mixta','Medio']];
+const VA_GPS=[['Rutas de la comunidad','Carretera','Medio'],['Salida libre','Mixta','Tranquilo'],['Family Members','Mixta','Medio']];
 
 const S={tab:'ciclistas',lic:{estado:'activo',msg:''},owner:false,push:[],members:[],rutas:[],news:[],support:[],aviso:null,club:null,clubId:null,isAdm:false,subs:[],editRuta:null};
 
@@ -162,7 +162,7 @@ auth.onAuthStateChanged(async u=>{
   S.subs.push(db.collection('va_config').doc('aviso').onSnapshot(s=>{S.aviso=s.exists?s.data():null;render()},e=>console.warn('aviso',e)));
   loadClub(u.uid);
 });
-/* El club: la cuenta de Google de la consola tiene que ser la misma que la del administrador en la app */
+/* La comunidad: la cuenta de Google de la consola tiene que ser la misma que la del administrador en la app */
 async function loadClub(myUid){
   try{
     const us=await db.collection('users').doc(myUid).get();const C=us.exists?us.data().group:null;
@@ -178,7 +178,7 @@ async function loadClub(myUid){
    solo dejan escribir al propietario). Aquí solo se muestra el aviso o el bloqueo al cliente */
 const LIC_WA='34643223301';
 const LIC_DEF={aviso:'Hay una factura pendiente de pago. Para evitar la suspensión del servicio, contacta con JM Prestige AI Solutions.',suspendido:'El servicio está suspendido temporalmente por un pago pendiente. Contacta con JM Prestige AI Solutions para reactivarlo.'};
-const TABS=[['ciclistas','👥 Ciclistas'],['grupetas','🏷️ Grupetas'],['rutas','🗺️ Rutas y fichas'],['consultas','❓ Consultas'],['novedades','🆕 Novedades, viajes y avisos'],['copias','💾 Copias']];
+const TABS=[['ciclistas','👥 Ciclistas'],['grupetas','🏷️ Grupetas'],['rutas','🗺️ Próximas rutas'],['consultas','❓ Consultas'],['novedades','🆕 Novedades, viajes y avisos'],['copias','💾 Copias']];
 function go(t){S.tab=t;S.editRuta=null;render();window.scrollTo(0,0)}
 function render(){
   if($('app').style.display!=='block')return;
@@ -257,7 +257,7 @@ async function cicDel(id){
   const x=S.members.find(m=>m.id===id);if(!x)return;
   const inClub=!!(S.club&&(S.club.members||{})[id]);
   let msg='¿Borrar a «'+(x.name||'Ciclista')+'» ('+(x.tel||'sin móvil')+') de la lista de ciclistas?\n\nÚsalo para duplicados o fichas que ya no sirven.';
-  if(inClub&&S.isAdm)msg+='\n\nTambién está en el club: se le sacará del club y de sus grupetas.';
+  if(inClub&&S.isAdm)msg+='\n\nTambién está en la comunidad: se le sacará de la comunidad y de sus grupetas.';
   msg+='\n\nSi vuelve a entrar en la app y cambia su nombre o su móvil, volverá a aparecer.';
   if(!confirm(msg))return;
   try{
@@ -276,16 +276,16 @@ function csv(){
 
 /* ---------- 🏷️ Grupetas ---------- */
 function clubWarn(){
-  if(!S.clubId)return `<div class="warn">⚠️ <b>Esta cuenta de Google no está unida al club en la app.</b><br>Para gestionar las grupetas desde aquí, en el móvil de la organización abre la app → <b>Perfil → Tu cuenta de Google → Guardar mi cuenta con Google</b> y elige <b>esta misma cuenta</b>. Después recarga la consola.</div>`;
-  if(!S.club)return `<div class="warn">Cargando el club…</div>`;
-  if(!S.isAdm)return `<div class="warn">⚠️ Esta cuenta está en el club <b>${esc(S.club.name)}</b>, pero no es administradora. Pide al creador del club que te haga administrador.</div>`;
+  if(!S.clubId)return `<div class="warn">⚠️ <b>Esta cuenta de Google no está unida a la comunidad en la app.</b><br>Para gestionar las grupetas desde aquí, en el móvil de la organización abre la app → <b>Perfil → Tu cuenta de Google → Guardar mi cuenta con Google</b> y elige <b>esta misma cuenta</b>. Después recarga la consola.</div>`;
+  if(!S.club)return `<div class="warn">Cargando la comunidad…</div>`;
+  if(!S.isAdm)return `<div class="warn">⚠️ Esta cuenta está en la comunidad <b>${esc(S.club.name)}</b>, pero no es administradora. Pide al creador de la comunidad que te haga administrador.</div>`;
   return '';
 }
 function vGrupetas(){
   const w=clubWarn();if(w)return w;
   const L=gpList();const mem=Object.entries(S.club.members||{}).sort((a,b)=>String(a[1]).localeCompare(String(b[1])));
   const miss=VA_GPS.filter(([n])=>!L.some(g=>g.name===n));
-  return `<div class="box"><h2>Club ${esc(S.club.name)} · código <span style="letter-spacing:2px">${esc(S.club.id)}</span></h2><p class="hint">${mem.length} miembros en el club. Cada ciclista puede estar en varias grupetas.</p>
+  return `<div class="box"><h2>Club ${esc(S.club.name)} · código <span style="letter-spacing:2px">${esc(S.club.id)}</span></h2><p class="hint">${mem.length} miembros en la comunidad. Cada ciclista puede estar en varias grupetas.</p>
    ${miss.length?`<button class="btn pri" style="margin-top:10px" onclick="gpCreateVA()">➕ Crear ${miss.map(m=>m[0]).join(', ')}</button>`:''}
    <div class="row" style="margin-top:10px"><input class="inp" id="gpNew" maxlength="30" placeholder="Otra grupeta (nombre)" style="flex:1 1 200px;width:auto"><button class="btn" onclick="gpAdd()">➕ Añadir</button></div></div>
   <div class="grid2">${L.map(g=>{const ids=Object.entries(S.club.gm||{}).filter(([k,l])=>Array.isArray(l)&&l.includes(g.id)&&(S.club.members||{})[k]).map(([k])=>k);
@@ -304,7 +304,7 @@ async function gpAdd(){const n=($('gpNew').value||'').trim().slice(0,30);if(!n){
   try{await clubRef().update({['grupetas.'+newId('g')]:{name:n,mod:'Mixta',lvl:'Medio',resp:{},t:Date.now()}});toast('✅ Grupeta creada')}catch(e){fail(e)}}
 async function gpRename(id){const g=S.club.grupetas[id];const n=(prompt('Nuevo nombre de la grupeta',g.name)||'').trim().slice(0,30);if(!n||n===g.name)return;
   try{await clubRef().update({['grupetas.'+id]:{...g,name:n,t:Date.now()}});toast('Nombre cambiado')}catch(e){fail(e)}}
-async function gpDel(id){if(!confirm('¿Eliminar la grupeta «'+gpName(id)+'»? Sus ciclistas siguen en el club.'))return;
+async function gpDel(id){if(!confirm('¿Eliminar la grupeta «'+gpName(id)+'»? Sus ciclistas siguen en la comunidad.'))return;
   const up={['grupetas.'+id]:FV.delete()};Object.entries(S.club.gm||{}).forEach(([k,l])=>{if(Array.isArray(l)&&l.includes(id)){const nx=l.filter(x=>x!==id);up['gm.'+k]=nx.length?nx:FV.delete()}});
   try{await clubRef().update(up);db.collection('rank').doc(S.club.id+'_'+id).delete().catch(()=>{});toast('Grupeta eliminada')}catch(e){fail(e)}}
 async function gpToggle(k,id,on){const l=((S.club.gm||{})[k]||[]).filter(x=>x!==id);if(on)l.push(id);
@@ -314,7 +314,7 @@ async function gpToggle(k,id,on){const l=((S.club.gm||{})[k]||[]).filter(x=>x!==
 function gpOptions(sel){return `<option value="">👥 Todos (también la Simple)</option>`+gpList().map(g=>`<option value="${esc(g.id)}"${sel===g.id?' selected':''}>${esc(g.name)}</option>`).join('')}
 function vRutas(){
   if(S.editRuta)return rutaForm(S.editRuta);
-  return `<div class="box"><h2>Rutas del club</h2><p class="hint">Cada ruta es una ficha: fecha, uno o varios días con su track (GPX), un PDF con toda la información y para qué grupeta es. Los ciclistas la ven en la app en «Rutas del club».</p>
+  return `<div class="box"><h2>Próximas rutas</h2><p class="hint">Cada ruta es una ficha: fecha, uno o varios días con su track (GPX), un PDF con toda la información y para qué grupeta es. Los ciclistas la ven en la app en «Rutas de la comunidad».</p>
    <button class="btn pri" style="margin-top:10px" onclick="rutaNew()">➕ Nueva ruta</button></div>
   ${S.rutas.length?`<div class="tbl"><table><thead><tr><th>Ruta</th><th>Fecha</th><th>Días</th><th>Para</th><th>PDF</th><th></th></tr></thead><tbody>${S.rutas.map(r=>`<tr>
     <td><b>${esc(r.title)}</b>${r.info?`<div class="hint">${esc(String(r.info).slice(0,90))}${String(r.info).length>90?'…':''}</div>`:''}</td>
@@ -407,7 +407,7 @@ async function newsDel(id){if(!confirm('¿Borrar esta novedad?'))return;try{awai
 
 /* ---------- 💾 Copias y restaurar ---------- */
 function vCopias(){
-  return `<div class="grid2"><div class="box"><h2>💾 Hacer una copia</h2><p class="hint">Descarga en un archivo todo lo de la consola: ciclistas, rutas y fichas, novedades, aviso, consultas y las grupetas del club. Guárdalo en el PC o en tu Drive.</p>
+  return `<div class="grid2"><div class="box"><h2>💾 Hacer una copia</h2><p class="hint">Descarga en un archivo todo lo de la consola: ciclistas, rutas y fichas, novedades, aviso, consultas y las grupetas de la comunidad. Guárdalo en el PC o en tu Drive.</p>
     <p class="hint" style="margin-top:8px">${S.members.length} ciclistas · ${S.rutas.length} rutas · ${S.news.length} novedades · ${S.support.length} consultas · ${gpList().length} grupetas</p>
     <button class="btn pri" style="margin-top:12px" onclick="backup()">⬇️ Descargar copia</button></div>
    <div class="box"><h2>♻️ Restaurar una copia</h2><p class="hint">Vuelve a poner lo que había en la copia. Lo que tenga el mismo nombre se sobrescribe; lo nuevo que no esté en la copia se queda.</p>
@@ -434,7 +434,7 @@ async function restore(){
   await put('va_support',d.support,x=>{const o={uid:String(x.uid||''),name:String(x.name||'').slice(0,40),tel:String(x.tel||'').slice(0,20),text:String(x.text||'').slice(0,1500),t:+x.t||Date.now()};if(x.reply){o.reply=String(x.reply).slice(0,1500);o.replyAt=+x.replyAt||Date.now();o.seen=!!x.seen}return o});
   if(d.aviso){try{await db.collection('va_config').doc('aviso').set({text:String(d.aviso.text||'').slice(0,280),active:!!d.aviso.active,t:+d.aviso.t||Date.now()});n++}catch(e){err++}}
   if(d.club&&S.club&&S.isAdm&&d.club.grupetas){try{await clubRef().update({grupetas:d.club.grupetas,gm:d.club.gm||{}});n++}catch(e){err++}}
-  msg.textContent=`✅ Restaurado: ${n} elementos${err?` · ${err} no se pudieron restaurar`:''}.`+(d.club&&!(S.club&&S.isAdm)?' Las grupetas no se restauraron: esta cuenta no es administradora del club.':'');
+  msg.textContent=`✅ Restaurado: ${n} elementos${err?` · ${err} no se pudieron restaurar`:''}.`+(d.club&&!(S.club&&S.isAdm)?' Las grupetas no se restauraron: esta cuenta no es administradora de la comunidad.':'');
 }
 function fail(e){console.warn(e);toast(/permission/i.test(e&&(e.code||e.message)||'')?'🔒 Sin permiso. Revisa las reglas de Firebase o la cuenta.':'No se pudo guardar. Revisa la conexión.')}
 </script>
