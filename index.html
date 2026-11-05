@@ -995,7 +995,7 @@ button,.btn,.li,.chip,.mini,.lvcatch,[onclick]{touch-action:manipulation;-webkit
     <button class="lvwind" id="lvWind" style="display:none" onclick="lwSay(true)" aria-label="Viento: toca para oírlo"></button>
     <div class="lvgrid nav" id="lvNavRow" style="display:none"><div><b class="num" id="lvLeft">—</b><span>km restantes</span></div><div><b class="num" id="lvEta">—</b><span>llegada</span></div><div><b class="num" id="lvUp">0</b><span>m subidos</span></div></div>
     <div class="lvgroup" id="lvGroup" style="display:none"></div>
-    <div class="lvalert" id="lvAlert" style="display:none"><button class="a-flat" onclick="sendAlert('mech')">⚙️ Avería</button><button class="a-help" onclick="sendAlert('fall')">🚑 Accidente</button><button class="a-wait" onclick="sendAlert('lost')">🧭 Perdido</button><button class="a-more" onclick="moreAlerts()" aria-label="Más avisos">➕ Más</button><button class="a-ptt" id="lvPtt" aria-label="Walkie: mantén pulsado para hablar al grupo">🎙️ Mantén pulsado y habla al grupo</button></div>
+    <div class="lvalert" id="lvAlert" style="display:none"><button class="a-flat" onclick="sendAlert('mech')">⚙️ Avería</button><button class="a-help" onclick="sosMedical()">🚑 Accidente</button><button class="a-wait" onclick="sendAlert('lost')">🧭 Perdido</button><button class="a-more" onclick="moreAlerts()" aria-label="Más avisos">➕ Más</button><button class="a-ptt" id="lvPtt" aria-label="Walkie: mantén pulsado para hablar al grupo">🎙️ Mantén pulsado y habla al grupo</button></div>
     <div class="lvmus" id="lvMus" style="display:none"></div>
     <div class="lvbtns"><button class="lvp" id="lvPause" onclick="togglePause()">⏸ Pausa</button><button class="lvs" onclick="stopLive()">⏹ Terminar</button><button class="lvmoon" onclick="saverOn()" aria-label="Modo ahorro: pantalla negra">🌙</button><button class="lvcam" onclick="camOpen()" aria-label="Cámara: fotos y vídeos">📷</button><button class="lvsos" onclick="sos()">SOS</button></div>
   </div>
@@ -1060,7 +1060,7 @@ button,.btn,.li,.chip,.mini,.lvcatch,[onclick]{touch-action:manipulation;-webkit
     <button class="btn btn-lime" onclick="go('rutas')">▶ Empezar salida</button>
     <button class="btn btn-line" onclick="go('rutas');setTimeout(()=>startPlanner('draw'),400)">🗺️ Planificar ruta</button>
   </div>
-  <button class="li" style="margin-top:12px;border-color:var(--red)" onclick="sos()"><span class="em">🆘</span><div><b>Alertas de seguridad</b><small>Llamar a la Asistencia (610 200 580) y enviar tu ubicación</small></div></button>
+  <button class="li" style="margin-top:12px;border-color:var(--red)" onclick="sos()"><span class="em">🛡️</span><div><b>Seguridad</b><small>Tu contacto de emergencia, el aviso de caída y cómo pedir ayuda</small></div></button>
   <!-- v5.15: Asistente VillorvinAdventure (beta) -->
   <a class="li" href="asistente.html" style="margin-top:12px;text-decoration:none;color:inherit;background:linear-gradient(135deg,rgba(77,163,255,.16),rgba(77,163,255,.04));border-color:var(--lime)"><span class="em">✨</span><div><b>Asistente VillorvinAdventure <span style="background:var(--lime);color:var(--on-lime);font-size:10px;font-weight:800;padding:2px 7px;border-radius:99px;vertical-align:2px;margin-left:4px">BETA</span></b><small>Pregunta por voz o escrito: dónde comer, fuentes, talleres, qué ropa ponerte, pinchazos…</small></div><svg class="i chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></a>
   <button class="li" style="margin-top:12px;border-color:var(--lime)" onclick="openNearby('rides')"><span class="em">🌍</span><div><b>Cerca de ti: salidas abiertas y clubes</b><small>Rueda con ciclistas de tu zona aunque no sean de tu club</small></div><svg class="i chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></button>
@@ -1163,6 +1163,11 @@ button,.btn,.li,.chip,.mini,.lvcatch,[onclick]{touch-action:manipulation;-webkit
     <label class="l" for="vaTelIn" style="margin-top:14px">Tu móvil</label>
     <div class="row2"><input class="inp" id="vaTelIn" type="tel" inputmode="tel" maxlength="20" placeholder="Ej. 600 123 456" autocomplete="tel"><button class="mini" onclick="vaSaveTel()">Guardar</button></div>
     <small style="display:block;color:var(--txt2);margin:6px 4px 0">Para que la asistencia de VillorvinAdventure pueda llamarte si tienes una avería o un problema.</small>
+    <label class="l" for="emTelIn" style="margin-top:14px">Teléfono de emergencia</label>
+    <input class="inp" id="emTelIn" type="tel" inputmode="tel" maxlength="20" placeholder="De un familiar o amigo" autocomplete="off">
+    <label class="l" for="emRelIn" style="margin-top:10px">Parentesco y/o nombre</label>
+    <div class="row2"><input class="inp" id="emRelIn" maxlength="40" placeholder="Ej. Mujer · Ana" autocomplete="off"><button class="mini" onclick="saveEmerProfile()">Guardar</button></div>
+    <small style="display:block;color:var(--txt2);margin:6px 4px 0">Le avisamos si tienes un accidente en tus salidas o en las de tu grupeta (además del 112).</small>
   </div>
   <div class="sec" style="margin-top:6px"><h3 style="font-size:18px">Tu cuenta de Google</h3></div>
   <p style="color:var(--txt2);font-size:14px;margin:-4px 4px 10px;line-height:1.45">Es tu <b>correo de Gmail</b>. Sirve para guardar tus datos y no perderlos si cambias de móvil. <b>No hace falta escribirlo:</b> pulsa el botón y elige tu correo en la ventana de Google.</p>
@@ -1192,7 +1197,7 @@ button,.btn,.li,.chip,.mini,.lvcatch,[onclick]{touch-action:manipulation;-webkit
   </div>
   <button class="li rs-pro" style="margin-top:14px" onclick="openPro()"><span class="em">⭐</span><div><b>Solicita la Pro de VillorvinAdventure</b><small>Para miembros. Misma cuenta, mismos datos.</small></div></button>
   <div class="shopline" id="shopLine" style="display:none"></div>
-  <p style="color:var(--txt2);font-size:13px;text-align:center;margin-top:20px">VillorvinAdventure Simple · versión 3.3.2</p>
+  <p style="color:var(--txt2);font-size:13px;text-align:center;margin-top:20px">VillorvinAdventure Simple · versión 3.4.0</p>
 </section>
 
 <!-- ============ BARRA INFERIOR ============ -->
@@ -4617,7 +4622,7 @@ async function sendAlert(kind,btext){
   db.collection('rides').doc(live.rideId).collection('msgs').add({uid,name:myName(),text,ts:now}).catch(()=>{});
   db.collection('rides').doc(live.rideId).update({lastMsg:{uid,name:myName(),text:text.slice(0,60),t:now}}).catch(()=>{});
   vib(200);
-  try{const rr=rides.find(x=>x.id===live.rideId);vaClubAlert(kind,p,live.rideTitle||(rr&&rr.title)||'',rr&&rr.group)}catch(e){}
+  try{if(vaRideNow()){const rr=rides.find(x=>x.id===live.rideId);vaClubAlert(kind,p,live.rideTitle||(rr&&rr.title)||'',rr&&rr.group)}}catch(e){}
   live.waText=`${ALERTS[kind].ico} VillorvinAdventure · ${live.rideTitle||'Salida en grupo'}\n*${myName()}*: ${bmsg}\n📍 https://maps.google.com/?q=${p[0].toFixed(5)},${p[1].toFixed(5)}`;
   if(kind==='ok'){alarmShow('ok','Aviso enviado: seguimos','¿Lo avisas también en el grupo de WhatsApp?',[['📲 Enviar por WhatsApp','al-main','alertWA();alarmClose()'],['No hace falta','al-sec','alarmClose()']]);setTimeout(()=>{if($('alTitle').textContent.startsWith('Aviso enviado: seguimos'))alarmClose()},12000);return}
   alarmShow(kind,'Aviso enviado al grupo',`Lo ve quien tenga VillorvinAdventure abierto. Para que suene a TODOS aunque tengan la app cerrada, mándalo también por WhatsApp:`,[['📲 Enviar también por WhatsApp','al-main','alertWA()'],['✅ Solucionado, seguimos','al-sec',"sendAlert('ok')"],['Ocultar','al-sec','alarmClose()']]);
@@ -4860,7 +4865,7 @@ function openClubChat(){
   if(clubChat.unsub)try{clubChat.unsub()}catch(e){}
   clubChat.unsub=db.collection('groups').doc(C).collection('msgs').orderBy('ts','desc').limit(120).onSnapshot(s=>{
     if(!$('clubChatList')){try{clubChat.unsub()}catch(e){}clubChat.unsub=null;return}
-    clubChat.msgs=s.docs.map(d=>({id:d.id,...d.data()})).reverse();renderClubChat();
+    clubChat.msgs=s.docs.map(d=>({id:d.id,...d.data()})).filter(m=>!/^(🆘 ALERTA|✅ RECIBIDO)/.test(String(m.text||''))).reverse();renderClubChat();
     store.set('cmSeen_'+C,Date.now());renderClubTalk();
   },e=>{console.warn('chat club',e);const l=$('clubChatList');if(l)l.innerHTML='<div class="empty" style="padding:12px">No se pudo cargar el chat. Si acabas de actualizar, el administrador tiene que publicar las reglas v4.5.</div>'});
 }
@@ -5005,18 +5010,33 @@ function reqSet(rid,qid,st){db.collection('open').doc(rid).collection('reqs').do
 const FEATURES=[
   ['Rodar en grupo',[['📡','Ciclistas del club cerca','Quién de tu club rueda a menos de 2 km','fn:openNearby()'],['👥','Mi club','Tu club, sus grupetas y sus ciclistas','fn:openGroup()'],['🔔','Probar aviso de pinchazo','Escucha la sirena del pelotón','fn:alarmTest()'],['🛰️','Pelotón en vivo','GPS en vivo de tu grupo','peloton']]],
   ['Compartir y descubrir',[['🗺️','Rutas del club','Rutas compartidas en tu club','fn:openCommRoutes()'],['☕','Puntos ciclistas','Fuentes, cafés, talleres y más','fn:openPois()'],['📰','Actividad del club','Últimas salidas de tu club','fn:openFeed()'],['🎖️','Logros','Tus medallas','fn:openBadges()']]],
-  ['Seguridad',[['🆘','Alertas de seguridad','Asistencia, ubicación y WhatsApp','sos']]]
+  ['Seguridad',[['🛡️','Seguridad','Contacto de emergencia, aviso de caída y 112','sos']]]
 ];
 $('features').innerHTML=FEATURES.map(([g,items])=>`<div class="grp-t">${g}</div>`+items.map(([e,t,s,p])=>`<button class="li" onclick="${p.startsWith('fn:')?p.slice(3):p==='sos'?'sos()':p==='peloton'?`toast('Se activa al pulsar «Empezar salida» el día de la salida')`:`toast('${t}: próximamente')`}"><span class="em">${e}</span><div><b>${t}</b><small>${s}</small></div><svg class="i chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></button>`).join('')).join('');
-function sos(){
+/* ===== VA 3.4 — Seguridad: 112 + contacto de emergencia propio. La Asistencia (610 200 580) solo en las rutas que organiza VillorvinAdventure ===== */
+const ASIS_TXT='610 200 580';
+function emerC(){const c=store.get('emerC',null)||{};return{name:String(c.name||'').slice(0,40),tel:String(c.tel||'').slice(0,20)}}
+/* ¿La salida en marcha la organiza VillorvinAdventure? (salida de la comunidad creada por la organización) */
+function vaRideNow(){try{if(!(live.on&&live.rideId))return false;const r=rides.find(x=>x.id===live.rideId);
+  if(!r||!r.byUid||!myGroup||r.group!==myGroup.id||!vaIn())return false;
+  return !!(myGroup.byUid===r.byUid||(myGroup.admins||{})[r.byUid]||(myGroup.captains||{})[r.byUid])}catch(e){return false}}
+function emerCard(){const c=emerC();
+  return `<div class="li" style="cursor:default"><span class="em">👤</span><div><b>${c.tel?'Tu contacto de emergencia':'Sin contacto de emergencia'}</b><small>${c.tel?esc(c.name||'Contacto')+' · '+esc(c.tel):'Ponlo ahora: es a quien avisamos si te pasa algo'}</small></div><button class="mini" onclick="openMyData()">${c.tel?'Cambiar':'Poner'}</button></div>`}
+const FD_APP_TXT='⚠️ El aviso de caída <b>solo funciona con la app abierta</b> (aunque la pantalla esté bloqueada). Si cierras la app, no avisa.';
+function sos(){if(live.on)sosRide();else sosInfo()}
+/* Comunidad → Seguridad: explicaciones y pruebas */
+function sosInfo(){
   openRideId=null;
-  $('rideBody').innerHTML=`<h2>Alertas de seguridad <button class="x" onclick="closeSheets()" aria-label="Cerrar"><svg class="i" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button></h2>
+  $('rideBody').innerHTML=sheetHead('🛡️ Seguridad')+`
   <div style="display:flex;flex-direction:column;gap:12px">
-   <a class="btn" style="background:var(--red);color:#fff;min-height:64px;font-size:20px;text-decoration:none" href="tel:+34610200580">📞 Llamar a Asistencia · 610 200 580</a>
    <button class="btn btn-lime" style="min-height:64px" onclick="sendLoc()">📍 Enviar mi ubicación por WhatsApp</button>
-   <p style="color:var(--txt2);text-align:center;font-size:14px">En caso de emergencia llama al Servicio de asistencia VillorvinAdventure: 610 200 580.</p>
+   <a class="btn" style="background:var(--red);color:#fff;min-height:64px;font-size:20px;text-decoration:none" href="tel:112">📞 Llamar al 112</a>
+   ${emerCard()}
+   <div class="plc"><div class="pc-h"><span class="pc-tag">Quién te ayuda</span><b>🚑 Si te pasa algo en ruta</b></div>
+    <small style="color:var(--txt2);display:block;margin-top:6px;line-height:1.5">• <b>En tus salidas y en las de tu grupeta:</b> 112 y aviso a tu contacto de emergencia.<br>• <b>En las rutas que organiza VillorvinAdventure:</b> te atiende su Asistencia (${ASIS_TXT}) y ellos avisan a tu familia si hace falta.<br>• El botón <b>SOS</b> está en el mapa (pestaña Rutas) mientras vas de ruta.</small></div>
    <div class="plc"><div class="pc-h"><span class="pc-tag">Caídas</span><b>🚑 Aviso automático de caída</b></div>
-    <small style="color:var(--txt2);display:block;margin:4px 0 8px">Mientras grabas una salida, si el móvil detecta un golpe fuerte y te quedas quieto, suena una alarma. Si no respondes en 30 segundos, se avisa a tu grupo y aparece en pantalla el botón para llamar a la Asistencia VillorvinAdventure.</small>
+    <small style="color:var(--txt2);display:block;margin:4px 0 8px">Funciona <b>mientras grabas una salida o sigues una ruta</b> (tuya, de tu grupeta o de VillorvinAdventure). Si el móvil detecta un golpe fuerte y te quedas quieto, suena una alarma. Si no respondes en 30 segundos, se avisa a tu grupo y aparecen los botones para llamar al 112 y avisar a tu contacto.</small>
+    <small style="display:block;margin:0 0 10px;color:#FCA5A5">${FD_APP_TXT}</small>
     <label style="display:flex;align-items:center;gap:10px;font-weight:700;margin-bottom:10px"><input type="checkbox" id="fdOn" ${store.get('fallOn',true)?'checked':''} onchange="store.set('fallOn',this.checked);toast(this.checked?'Aviso de caída activado':'Aviso de caída desactivado')" style="width:22px;height:22px"> Activar aviso de caída</label>
     <label class="l" for="fdSens">Sensibilidad</label>
     <select class="inp" id="fdSens" onchange="store.set('fallSens',this.value);toast('Sensibilidad: '+this.options[this.selectedIndex].text)" style="margin-bottom:10px">
@@ -5024,12 +5044,44 @@ function sos(){
      <option value="normal" ${store.get('fallSens','normal')==='normal'?'selected':''}>Normal — recomendada (9 g)</option>
      <option value="alta" ${store.get('fallSens','normal')==='alta'?'selected':''}>Alta — golpes más suaves (6 g)</option>
     </select>
-    <div class="li" style="cursor:default;margin-bottom:10px"><span class="em">📞</span><div><b>Contacto de emergencia: Asistencia VillorvinAdventure</b><small>610 200 580 · fijo, lo gestiona la organización</small></div></div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px"><button class="btn btn-line" style="grid-column:1/-1" onclick="fallTest()">🧪 Ver pantalla</button></div>
     <button class="btn btn-line" style="margin-top:8px;min-height:52px" onclick="fallSensorTest()">📳 Probar el sensor de verdad</button>
     <small id="fdTestMsg" style="display:block;margin-top:6px;color:var(--txt2)">Pulsa y deja caer el móvil sobre la cama o un cojín (con cuidado). No hace falta moverse.</small>
    </div></div>`;
   openSheet('sh-ride');
+}
+/* SOS en ruta (botón del mapa): lo más directo posible */
+function sosRide(){
+  openRideId=null;const grp=!!live.rideId,va=vaRideNow(),c=emerC();
+  const quick=grp?`<div class="grp-t" style="margin:4px 0 0">Avisar al grupo</div>
+   <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+    <button class="btn btn-line" style="min-height:64px;font-size:14px;padding:6px" onclick="closeSheets();sendAlert('mech')">⚙️<br>Avería</button>
+    <button class="btn btn-line" style="min-height:64px;font-size:14px;padding:6px" onclick="closeSheets();sendAlert('lost')">🧭<br>Fuera de rumbo</button>
+    <button class="btn btn-line" style="min-height:64px;font-size:14px;padding:6px" onclick="closeSheets();sendAlert('back')">🐢<br>Voy lento</button></div>`
+   :`<button class="btn btn-line" style="min-height:56px" onclick="sosMech()">⚙️ Avería mecánica</button>`;
+  $('rideBody').innerHTML=sheetHead('🆘 SOS')+`
+  <div style="display:flex;flex-direction:column;gap:10px">
+   <button class="btn" style="background:var(--red);color:#fff;min-height:72px;font-size:20px;font-weight:800" onclick="sosMedical()">🚑 Accidente o problema médico</button>
+   <small style="color:var(--txt2);text-align:center;margin:-4px 0 2px">${va?'Avisa a la organización y te deja llamar a la Asistencia ('+ASIS_TXT+')':'Avisa'+(grp?' al grupo,':'')+' a tu contacto de emergencia y te deja llamar al 112'}</small>
+   ${va?`<a class="btn" style="background:#B91C1C;color:#fff;min-height:60px;text-decoration:none" href="tel:+34${VA_TEL}">📞 Llamar a Asistencia · ${ASIS_TXT}</a>`:''}
+   <a class="btn" style="background:${va?'transparent;border:2px solid var(--red);color:var(--txt)':'#B91C1C;color:#fff'};min-height:60px;text-decoration:none" href="tel:112">📞 Llamar al 112</a>
+   <button class="btn btn-lime" style="min-height:60px" onclick="sendLoc()">📍 Enviar mi ubicación por WhatsApp</button>
+   ${quick}
+   <label style="display:flex;align-items:center;gap:10px;font-weight:700;margin-top:4px"><input type="checkbox" ${store.get('fallOn',true)?'checked':''} onchange="store.set('fallOn',this.checked);if(this.checked)fallStart();else{window.removeEventListener('devicemotion',fallMotion);fd.on=false}toast(this.checked?'Aviso de caída activado':'Aviso de caída desactivado')" style="width:24px;height:24px"> Activar aviso de caída</label>
+   ${c.tel?'':`<button class="lnk" onclick="openMyData()">⚠️ No tienes contacto de emergencia: ponlo aquí</button>`}
+  </div>`;
+  openSheet('sh-ride');
+}
+/* Avería yendo solo: ¿te ayuda el asistente? */
+async function sosMech(){
+  closeSheets();
+  if(await askConfirm('⚙️ Avería mecánica','¿Quieres abrir el Asistente VillorvinAdventure para intentar solucionarla? La grabación sigue en marcha.')){try{window.open('asistente.html','_blank','noopener')}catch(e){location.href='asistente.html'}}
+}
+/* Accidente / problema médico pulsado a mano */
+function sosMedical(){
+  closeSheets();fd.test=false;alarmUnlock();
+  fallHelp('manual');
+  setTimeout(()=>{try{location.href=vaRideNow()?'tel:+34'+VA_TEL:'tel:112'}catch(e){}},900);
 }
 /* ===== v3.12 — Aviso automático de caída (sin Telegram) ===== */
 /* Sensibilidad: baja = golpes muy fuertes; alta = golpes más suaves */
@@ -5056,7 +5108,7 @@ async function fallStart(){
   fd.state='idle';if(!store.get('fallOn',true)||fd.on)return;
   try{if(window.DeviceMotionEvent&&typeof DeviceMotionEvent.requestPermission==='function'){const r=await DeviceMotionEvent.requestPermission();if(r!=='granted'){toast('Sin permiso de movimiento: el aviso de caída no funcionará');return}}}catch(e){}
   window.addEventListener('devicemotion',fallMotion);fd.on=true;
-  if(!(store.get('sosContact',{})||{}).tel&&!store.get('fdTip')){store.set('fdTip',1);setTimeout(()=>toast('💡 Pon un contacto de emergencia en Seguridad → Alertas de seguridad'),4000)}
+  if(!emerC().tel&&!store.get('fdTip')){store.set('fdTip',1);setTimeout(()=>toast('💡 Pon tu contacto de emergencia en Perfil → Mis datos'),4000)}
 }
 function fallStop(){window.removeEventListener('devicemotion',fallMotion);fd.on=false;clearInterval(fd.watchT);clearInterval(fd.cd);clearInterval(fd.rep);fd.state='idle';const b=$('fallBox');if(b)b.classList.remove('show')}
 function fallAsk(test){
@@ -5085,24 +5137,25 @@ function fallOk(){clearInterval(fd.cd);clearInterval(fd.rep);alarmStop();try{spe
 function fallPos(){const p=live.on&&live.pts&&live.pts.at(-1);return p?'https://maps.google.com/?q='+p[0].toFixed(5)+','+p[1].toFixed(5):''}
 function fallHelp(auto){
   clearInterval(fd.cd);fd.state='help';
-  const c=store.get('sosContact',{})||{},tel=telNorm(c.tel),nm=c.name||'tu contacto';
-  const loc=fallPos();const msg=`🚑 AVISO DE CAÍDA — VillorvinAdventure\n${myName()} puede haber sufrido una caída en bici y no responde.${loc?'\n📍 Ubicación: '+loc:''}\nAsistencia VillorvinAdventure: 610 200 580.`;
+  const manual=auto==='manual',va=!fd.test&&vaRideNow();
+  const c=emerC(),tel=telNorm(c.tel),nm=c.name||'tu contacto';
+  const loc=fallPos();
+  const msg=`${manual?'🆘 EMERGENCIA':'🚑 AVISO DE CAÍDA'} — VillorvinAdventure\n${myName()} ${manual?'ha pedido ayuda (accidente o problema médico)':'puede haber sufrido una caída en bici y no responde'}.${loc?'\n📍 Ubicación: '+loc:''}\n${va?'Asistencia VillorvinAdventure: '+ASIS_TXT+'.':'Emergencias: 112.'}`;
   if(!fd.test&&live.on&&live.rideId){try{sendAlert('fall')}catch(e){}}
-  if(!fd.test&&!(live.on&&live.rideId)){try{vaClubAlert('fall',live.on&&live.pts.length?live.pts.at(-1):(meMarker?hereLL():null),'')}catch(e){}}
   const famOn=fam.on;famAlert('fall',fd.test);
   const B=$('fallBox');
-  B.innerHTML=`<div style="font-size:52px">🆘</div><h2>${fd.test?'Prueba de emergencia':'Posible caída'}</h2>
-   <p><b>Si encuentras a este ciclista:</b> puede haberse caído. Llama a la Asistencia VillorvinAdventure: <b>610 200 580</b>.</p>${loc?`<p style="font-size:14px">📍 ${esc(loc.split('q=')[1])}</p>`:''}
+  B.innerHTML=`<div style="font-size:52px">🆘</div><h2>${fd.test?'Prueba de emergencia':manual?'Emergencia':'Posible caída'}</h2>
+   <p><b>Si encuentras a este ciclista:</b> ${manual?'necesita ayuda.':'puede haberse caído.'} ${va?'Llama a la Asistencia VillorvinAdventure: <b>'+ASIS_TXT+'</b>.':'Llama al <b>112</b>.'}</p>${loc?`<p style="font-size:14px">📍 ${esc(loc.split('q=')[1])}</p>`:''}
    ${fd.test?'':live.rideId?'<p style="font-size:14px">✅ Tu grupo ya ha recibido el aviso con alarma.</p>':''}
    ${famOn?`<p style="font-size:14px">✅ Tu familia ${fd.test?'verá el aviso de PRUEBA':'ya ve el aviso'} en su enlace de ubicación.</p>`:''}
-   <a class="fbtn f112" href="tel:+34610200580">📞 Llamar a Asistencia · 610 200 580</a>
-   ${tel?`<a class="fbtn fsec" href="https://wa.me/${tel}?text=${encodeURIComponent(msg)}" target="_blank" rel="noopener">📲 Avisar a ${esc(nm)} por WhatsApp</a><a class="fbtn fsec" href="tel:+${tel}">📞 Llamar a ${esc(nm)}</a>`
+   ${va?`<a class="fbtn f112" href="tel:+34${VA_TEL}">📞 Llamar a Asistencia · ${ASIS_TXT}</a><a class="fbtn fsec" href="tel:112">📞 Llamar al 112</a>`:`<a class="fbtn f112" href="tel:112">📞 Llamar al 112</a>`}
+   ${va?'':tel?`<a class="fbtn fsec" href="https://wa.me/${tel}?text=${encodeURIComponent(msg)}" target="_blank" rel="noopener">📲 Avisar a ${esc(nm)} por WhatsApp</a><a class="fbtn fsec" href="tel:+${tel}">📞 Llamar a ${esc(nm)}</a>`
       :`<a class="fbtn fsec" href="https://wa.me/?text=${encodeURIComponent(msg)}" target="_blank" rel="noopener">📲 Enviar mi ubicación por WhatsApp</a>`}
    <button class="fbtn fok" onclick="fallOk()">✅ Estoy bien, cancelar</button>`;
   B.classList.add('show');
-  if(!fd.test){vib([600,200,600,200,600]);alarmSound('fall',4);setTimeout(()=>speak('Atención. Posible caída. Si encuentras a este ciclista, llama a la asistencia: seis uno cero, dos cero cero, cinco ocho cero.'),2500);
+  if(!fd.test){vib([600,200,600,200,600]);alarmSound('fall',4);setTimeout(()=>speak(va?'Atención. Si encuentras a este ciclista, llama a la asistencia: seis uno cero, dos cero cero, cinco ocho cero.':'Atención. Si encuentras a este ciclista, llama al uno uno dos.'),2500);
     clearInterval(fd.rep);fd.rep=setInterval(()=>{if(fd.state!=='help'){clearInterval(fd.rep);return}alarmSound('fall',2);vib([600,200,600])},20000);
-    if(document.visibilityState!=='visible')bgNotify('🆘 Posible caída','Abre la app: llama a la Asistencia VillorvinAdventure.',true)}
+    if(document.visibilityState!=='visible')bgNotify('🆘 '+(manual?'Emergencia':'Posible caída'),va?'Abre la app: llama a la Asistencia VillorvinAdventure.':'Abre la app: llama al 112 y avisa a tu contacto.',true)}
 }
 function fallTest(){closeSheets();fallAsk(true)}
 /* Prueba real del sensor: 30 s, sin necesidad de ir en bici */
@@ -6478,6 +6531,7 @@ async function startLive(opt){
   if(opt.route)navRoute(opt.route,opt.wps);
   else setLine(map,null,'plan');
   fallStart();cascoStart();
+  if(store.get('fallOn',true))setTimeout(()=>{if(live.on)toast('🚑 Aviso de caída activo. Solo funciona con la app abierta (aunque bloquees la pantalla)',5500)},2500);
   live.watch=navigator.geolocation.watchPosition(onFix,e=>{if(e.code===1)toast('Activa el permiso de ubicación para grabar')},{enableHighAccuracy:true,maximumAge:1000,timeout:20000});
   live.timer=setInterval(renderLive,1000);
   live.bkTimer=setInterval(liveBackup,15000);setTimeout(liveBackup,1500);
@@ -7441,46 +7495,47 @@ async function loadShop(){
     if(uid&&store.get('shopSent','')!==id){try{await db.collection('users').doc(uid).set({shop:id},{merge:true});store.set('shopSent',id)}catch(e){}}
   }catch(e){console.warn('tienda',e)}
 }
-setTimeout(()=>{shopSplash();renderShopLine()},150);   // v5.8.2 — si la app se abrió desde un enlace o un aviso, no sale el recordatorio de seguridad
+setTimeout(()=>{shopSplash();renderShopLine()},150);
+setTimeout(()=>{try{vaFillTel()}catch(e){}},700);   // VA 3.4: rellena «Mis datos» en Perfil   // v5.8.2 — si la app se abrió desde un enlace o un aviso, no sale el recordatorio de seguridad
 const ONB=[
   ['<img src="va-logo.png" alt="VillorvinAdventure" style="width:260px;max-width:80vw;height:auto">','Bienvenido a la comunidad','La app de VillorvinAdventure: nuestras rutas, tu grupo y asistencia si algo pasa, también cuando sales solo.'],
   ['🚴','Tu bici, tu ruta','Graba tus salidas, planifica rutas y avisa con un toque si te caes. Cuando la domines, pásate a la Pro.'],
-  ['👋','¿Cómo te llamas?','Para saludarte y para tus avisos de seguridad.'],
-  ['🚑','Seguridad primero','Si te caes o tienes un problema, avisamos a la Asistencia VillorvinAdventure: 610 200 580.']
+  ['👋','Tus datos','Los necesitamos para tus avisos de seguridad.'],
+  ['🚑','Seguridad primero','En tus salidas y en las de tu grupeta, si te caes o pulsas SOS: llamas al 112 y avisamos a tu contacto de emergencia. En las rutas que organiza VillorvinAdventure te atiende su Asistencia (610 200 580).']
 ];
 let onbI=0;
 function showOnb(){if($('onb').classList.contains('show'))return;onbI=0;paintOnb();$('onb').classList.add('show')}
 function paintOnb(){
   const [e,t,p]=ONB[onbI];
-  $('onbSlide').innerHTML=`<div class="big">${e}</div><h2>${t}</h2><p>${p}</p>${onbI===2?'<input class="inp" id="onbName" placeholder="Tu nombre y apellido (no el correo)" maxlength="24" autocomplete="name"><input class="inp" id="onbTel" type="tel" inputmode="tel" placeholder="Tu móvil (ej. 600 123 456)" maxlength="20" autocomplete="tel" style="margin-top:8px"><small style="color:var(--txt2);max-width:320px;margin-top:6px">Tu móvil es para que la asistencia de VillorvinAdventure pueda llamarte si tienes una avería o un problema.</small><small style="color:var(--txt2);max-width:320px">Al empezar aceptas la <a href="https://www.villorvinadventure.com/pol%C3%ADtica-y-condiciones" target="_blank" rel="noopener" style="color:var(--lime)">privacidad y condiciones</a> de VillorvinAdventure.</small>':''}${onbI===3?safeFormHTML('onb'):''}`;
+  const ec=emerC();
+  $('onbSlide').innerHTML=`<div class="big">${e}</div><h2>${t}</h2><p>${p}</p>${onbI===2?`<input class="inp" id="onbName" placeholder="A. Nombre y apellido (no el correo)" maxlength="40" autocomplete="name" value="${esc(me&&me.name||'')}"><input class="inp" id="onbTel" type="tel" inputmode="tel" placeholder="B. Tu teléfono (ej. 600 123 456)" maxlength="20" autocomplete="tel" style="margin-top:8px" value="${esc(store.get('vaTel',''))}"><input class="inp" id="onbETel" type="tel" inputmode="tel" placeholder="C. Teléfono de emergencia" maxlength="20" autocomplete="off" style="margin-top:8px" value="${esc(ec.tel)}"><input class="inp" id="onbERel" placeholder="D. Parentesco y/o nombre (ej. Mujer · Ana)" maxlength="40" autocomplete="off" style="margin-top:8px" value="${esc(ec.name)}"><small style="color:var(--txt2);max-width:320px;margin-top:6px">El teléfono de emergencia es de un familiar o amigo: le avisamos si tienes un accidente.</small><small style="color:var(--txt2);max-width:320px">Al empezar aceptas la <a href="https://www.villorvinadventure.com/pol%C3%ADtica-y-condiciones" target="_blank" rel="noopener" style="color:var(--lime)">privacidad y condiciones</a> de VillorvinAdventure.</small>`:''}${onbI===3?`<div class="safef"><small>${FD_APP_TXT}</small><button class="btn btn-line" type="button" onclick="fallAsk(true)">🧪 Ver cómo es el aviso de caída</button></div>`:''}`;
   $('onbDots').innerHTML=ONB.map((_,i)=>`<i class="${i===onbI?'on':''}"></i>`).join('');
-  $('onbNext').textContent=onbI===3?'💾 Guardar y empezar':onbI===2?'Continuar':'Siguiente';
+  $('onbNext').textContent=onbI===3?'¡Empezar!':onbI===2?'💾 Guardar y continuar':'Siguiente';
 }
 /* v5.8 — Formulario «Seguridad primero» (en la bienvenida y en el recordatorio) */
-function safeFormHTML(k){const c=store.get('sosContact',{})||{};
-  return `<div class="safef"><input class="inp" id="${k}SfName" placeholder="Nombre" maxlength="40" value="${esc(c.name||'')}" autocomplete="off" readonly>
-  <input class="inp" id="${k}SfTel" type="tel" inputmode="tel" placeholder="Teléfono" maxlength="20" value="${esc(c.tel||'')}" readonly>
-  <small>🚑 El <b>aviso de caída</b> ya está activado. Si el móvil nota un golpe fuerte en marcha y no respondes en 30 s, avisa a tu grupo y te deja llamar a la Asistencia VillorvinAdventure.</small>
-  <button class="btn btn-line" type="button" onclick="fallAsk(true)">🧪 Ver cómo es el aviso</button>
-  ${k==='onb'?'<button class="lnk" type="button" onclick="onbDone(true)">Hacerlo luego</button>':''}</div>`}
+function safeFormHTML(k){const c=emerC();
+  return `<div class="safef"><input class="inp" id="${k}SfTel" type="tel" inputmode="tel" placeholder="Teléfono de emergencia" maxlength="20" value="${esc(c.tel)}" autocomplete="off">
+  <input class="inp" id="${k}SfName" placeholder="Parentesco y/o nombre (ej. Mujer · Ana)" maxlength="40" value="${esc(c.name)}" autocomplete="off">
+  <small>🚑 Si tienes un accidente en tus salidas o en las de tu grupeta, le avisamos y te dejamos llamar al 112. ${FD_APP_TXT}</small></div>`}
 function safeSave(k){const name=($(k+'SfName').value||'').trim().slice(0,40),tel=($(k+'SfTel').value||'').trim().slice(0,20);
-  if(!tel){toast('Escribe el teléfono de tu contacto');return false}
-  if(telNorm(tel).length<9){toast('Revisa el teléfono');return false}
-  store.set('sosContact',{name,tel});store.set('safeOnb',1);return true}
+  if(!tel){toast('Escribe el teléfono de emergencia');return false}
+  if(telNorm(tel).length<9){toast('Revisa el teléfono de emergencia');return false}
+  if(!name){toast('Escribe el parentesco y/o nombre');return false}
+  store.set('emerC',{name,tel});store.set('safeOnb',1);store.set('vaRegd','');try{vaReg()}catch(e){}return true}
 function onbDone(later){
   if(later)store.set('safeLater',Date.now());
   $('onb').classList.remove('show');paintName();renderRides();
-  const n=myName();toast(later?'¡Bienvenido, '+n+'! Recuerda: Comunidad → Alertas de seguridad':'✅ Listo, '+n+'. Contacto de emergencia guardado');
+  const n=myName();toast(later?'¡Bienvenido, '+n+'! Recuerda: Perfil → Mis datos':'✅ Listo, '+n+'. ¡Buena ruta!');
 }
 /* v5.8 — A quien ya usa la app sin contacto de emergencia se lo pedimos una vez (y otra a los 7 días si dice «ahora no») */
 function safetyNudge(){
   if(window.__sn)return;window.__sn=1;
-  const c=store.get('sosContact',{})||{};if(c.tel||!me||!me.name)return;
+  const c=emerC();if(c.tel||!me||!me.name)return;
   const L=+store.get('safeLater',0);if(L&&Date.now()-L<7*864e5)return;
   if($('onb').classList.contains('show')||document.querySelector('.sheet.show')||live.on||window.__hash0)return;
   openRideId=null;
   $('rideBody').innerHTML=`<h2>🚑 Seguridad primero <button class="x" onclick="safeLaterClose()" aria-label="Cerrar"><svg class="i" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button></h2>
-   <p style="color:var(--txt2);margin:-4px 0 12px">Aún no tienes <b>contacto de emergencia</b>. Si te caes en una salida, ¿a quién avisamos? Tarda 20 segundos.</p>
+   <p style="color:var(--txt2);margin:-4px 0 12px">Aún no tienes <b>contacto de emergencia</b>. Si tienes un accidente, ¿a quién avisamos? Tarda 20 segundos.</p>
    ${safeFormHTML('nd')}
    <button class="btn btn-lime" style="margin-top:12px;min-height:56px" onclick="if(safeSave('nd')){closeSheets();toast('✅ Contacto de emergencia guardado')}">💾 Guardar</button>
    <button class="btn btn-line" style="margin-top:8px" onclick="safeLaterClose()">Ahora no</button>`;
@@ -7489,15 +7544,17 @@ function safetyNudge(){
 function safeLaterClose(){store.set('safeLater',Date.now());closeSheets()}
 $('onbNext').onclick=()=>{
   if(onbI<2){onbI++;paintOnb();return}
-  if(onbI===3){if(safeSave('onb'))onbDone(false);return}
-  const n=$('onbName').value.trim().slice(0,24);if(!n){toast('Escribe tu nombre');return}
-  const vt=($('onbTel').value||'').trim().slice(0,20);if(telNorm(vt).length<9){toast('Escribe tu número de móvil');return}
+  if(onbI===3){onbDone(false);return}
+  const n=$('onbName').value.trim().slice(0,40);if(n.split(/\s+/).filter(Boolean).length<2){toast('Escribe tu nombre y apellido');return}
+  const vt=($('onbTel').value||'').trim().slice(0,20);if(telNorm(vt).length<9){toast('Escribe tu número de teléfono');return}
+  const et=($('onbETel').value||'').trim().slice(0,20);if(telNorm(et).length<9){toast('Escribe el teléfono de emergencia');return}
+  const er=($('onbERel').value||'').trim().slice(0,40);if(!er){toast('Escribe el parentesco y/o nombre de tu contacto');return}
+  if(telNorm(et)===telNorm(vt)){toast('El teléfono de emergencia tiene que ser de otra persona');return}
   if(!db||!uid){toast('Conectando… inténtalo en unos segundos');return}
-  store.set('vaTel',vt);store.set('vaRegd','');
+  store.set('vaTel',vt);store.set('vaRegd','');store.set('emerC',{name:er,tel:et});store.set('safeOnb',1);
   me={name:n,pts:0,created:0};store.set('me',me);window.__sn=1;
   db.collection('users').doc(uid).set({name:n,pts:0,created:0,since:FV.serverTimestamp()},{merge:true}).catch(netErr);
   paintName();vaReg();
-  if((store.get('sosContact',{})||{}).tel){onbDone(false);return}
   onbI=3;paintOnb();
 };
 
@@ -7581,8 +7638,7 @@ function renderVA(){
      <div style="display:flex;align-items:center;gap:12px">
       <div style="flex:1;min-width:0;text-align:center"><b style="display:block;font-size:17px">Comunidad VillorvinAdventure</b><small style="color:var(--txt2)">${n} ${n===1?'miembro':'miembros'} · ${vaOrg()?'🛡️ Eres de la organización':'Estás protegido por la organización'}</small></div></div>
      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px">
-      <button class="btn btn-line" onclick="openClubChat()">💬 Chat</button>
-      <button class="btn" style="background:var(--red);color:#fff" onclick="vaSOS()">🆘 Avisar</button>
+      <button class="btn btn-line" style="grid-column:1/-1" onclick="openClubChat()">💬 Chat</button>
       ${vaOrg()?`<button class="btn btn-lime" style="grid-column:1/-1" onclick="openClubAdmin('members')">🛡️ Panel de la organización</button>`:''}
       ${vaOrg()&&!store.get('push',0)?`<button class="btn" style="grid-column:1/-1;background:#F59E0B;color:#1c1300;font-weight:800" onclick="setPush(true).then(()=>renderVA())">🔔 Activa las alarmas con la app cerrada</button>`:''}
      </div></div>`;
@@ -7594,7 +7650,7 @@ function renderVA(){
      <button class="btn btn-line" onclick="vaCodeBtn()">🔗 Ya tengo el código</button></div></div>`;
   }else b.innerHTML='';
   if(b.firstElementChild&&vaAvisoOn())b.insertAdjacentHTML('afterbegin',vaAvisoHTML());
-  const card=b.querySelector('.plc');if(card)card.insertAdjacentHTML('beforeend',`${vaBtns()}<div style="display:grid;gap:8px;margin-top:8px"><button class="btn btn-line" style="border-color:var(--red)" onclick="sos()">🆘 Alertas de seguridad</button><button class="btn btn-line" onclick="famShare()">📍 Ubicación para la familia</button></div><a class="btn" style="margin-top:8px;width:100%;text-decoration:none;background:#25D366;color:#fff;font-weight:800" target="_blank" rel="noopener" href="https://wa.me/34${VA_TEL}?text=${encodeURIComponent('Hola VillorvinAdventure, soy '+(me&&me.name?me.name:'')+'. ')}">💬 Chatea por WhatsApp</a>`);
+  const card=b.querySelector('.plc');if(card)card.insertAdjacentHTML('beforeend',`${vaBtns()}<div style="display:grid;gap:8px;margin-top:8px"><button class="btn btn-line" onclick="famShare()">📍 Ubicación para la familia</button></div><a class="btn" style="margin-top:8px;width:100%;text-decoration:none;background:#25D366;color:#fff;font-weight:800" target="_blank" rel="noopener" href="https://wa.me/34${VA_TEL}?text=${encodeURIComponent('Hola VillorvinAdventure, soy '+(me&&me.name?me.name:'')+'. ')}">💬 Chatea por WhatsApp</a>`);
 }
 /* Envía el aviso al chat del club (lo ve la organización aunque no esté en la salida) */
 function vaClubAlert(kind,p,title,club){
@@ -7659,7 +7715,12 @@ function vaAck(k){const a=vaAl[k];if(!a||!me?.group)return;alarmClose();
   db.collection('groups').doc(me.group).collection('msgs').add({uid,name:myName(),text:('✅ RECIBIDO · La organización ha recibido el aviso de '+a.name+' (ref '+a.ref+'). Te estamos atendiendo.').slice(0,300),ts:Date.now()}).then(()=>toast('✅ '+a.name+' ya sabe que lo estás gestionando')).catch(netErr)}
 function vaMap(k){const a=vaAl[k];if(a&&a.link)window.open(a.link,'_blank')}
 function vaSaveTel(){const i=$('vaTelIn');const t=(i&&i.value||'').trim().slice(0,20);if(telNorm(t).length<9){toast('Revisa el número de móvil');return}store.set('vaTel',t);store.set('vaRegd','');vaReg();toast('✅ Móvil guardado')}
-function vaFillTel(){const i=$('vaTelIn');if(i&&!i.value)i.value=store.get('vaTel','')}
+function vaFillTel(){const i=$('vaTelIn');if(i&&!i.value)i.value=store.get('vaTel','');const c=emerC(),a=$('emTelIn'),b=$('emRelIn');if(a&&!a.value)a.value=c.tel;if(b&&!b.value)b.value=c.name}
+function saveEmerProfile(){const tel=($('emTelIn').value||'').trim().slice(0,20),name=($('emRelIn').value||'').trim().slice(0,40);
+  if(telNorm(tel).length<9){toast('Revisa el teléfono de emergencia');return}if(!name){toast('Escribe el parentesco y/o nombre');return}
+  store.set('emerC',{name,tel});store.set('vaRegd','');vaReg();toast('✅ Contacto de emergencia guardado')}
+/* Abre Perfil en «Mis datos» */
+function openMyData(){closeSheets();go('perfil');setTimeout(()=>{vaFillTel();const e=$('emTelIn');if(e){e.scrollIntoView({behavior:'smooth',block:'center'});setTimeout(()=>e.focus(),400)}},350)}
 function vaCodeBtn(){if(typeof RS_SIMPLE!=='undefined'&&RS_SIMPLE)openPro();else joinGroupAsk()}
 /* v2.4 — Push a la organización con la app cerrada (Worker de Cloudflare villorvin-push) */
 const VA_PUSH_URL='https://villorvinadventure-push.pedrosaborrego.workers.dev';
@@ -7707,8 +7768,9 @@ function vaCall(k){const a=vaAl[k];if(a&&a.tel)location.href='tel:+'+telNorm(a.t
 function vaReg(){
   const t=store.get('vaTel','');if(!db||!uid||!t||!me||!me.name)return;
   const app=typeof RS_SIMPLE!=='undefined'&&RS_SIMPLE?'simple':'pro';
-  const key=uid+'|'+me.name+'|'+t+'|'+app;if(store.get('vaRegd','')===key)return;
+  const c=emerC();const key=uid+'|'+me.name+'|'+t+'|'+app+'|'+c.tel+'|'+c.name;if(store.get('vaRegd','')===key)return;
   db.collection('va_members').doc(uid).set({name:String(me.name).slice(0,40),tel:String(t).slice(0,20),t:Date.now(),app})
+    .then(()=>c.tel?db.collection('va_members').doc(uid).set({eTel:c.tel,eName:c.name},{merge:true}).catch(e=>console.warn('VA contacto',e)):null)
     .then(()=>store.set('vaRegd',key)).catch(e=>console.warn('VA ficha',e));
 }
 let vaAsked=false;

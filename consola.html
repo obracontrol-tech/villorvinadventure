@@ -235,21 +235,23 @@ function vCiclistas(){
     <div class="stat"><b>${L.length}</b><span>Ciclistas registrados</span></div>
     <div class="stat"><b>${L.filter(x=>x.app==='pro').length}</b><span>En la Pro</span></div>
     <div class="stat"><b>${L.filter(x=>x.app!=='pro').length}</b><span>En la Simple</span></div>
-    <div class="stat"><b>${L.filter(x=>(x.t||0)>wk).length}</b><span>Nuevos esta semana</span></div></div>
+    <div class="stat"><b>${L.filter(x=>(x.t||0)>wk).length}</b><span>Nuevos esta semana</span></div>
+    <div class="stat"><b>${L.filter(x=>!x.eTel).length}</b><span>Sin contacto de emergencia</span></div></div>
   <div class="bar"><label for="rq" style="position:absolute;left:-9999px">Buscar ciclista</label><input class="inp" id="rq" type="search" placeholder="Buscar por nombre o móvil…" oninput="$('rbody').innerHTML=rowsCic()"><button class="btn" onclick="csv()">⬇️ Descargar lista (Excel)</button></div>
   ${pushTable()}
-  <div class="tbl"><table><thead><tr><th>Ciclista</th><th>Móvil</th><th>App</th><th>Grupetas</th><th>Alta / último cambio</th><th>Último aviso</th><th>Contactar</th></tr></thead><tbody id="rbody">${rowsCic(v)}</tbody></table></div>`;
+  <div class="tbl"><table><thead><tr><th>Ciclista</th><th>Móvil</th><th>Contacto de emergencia</th><th>App</th><th>Grupetas</th><th>Alta / último cambio</th><th>Último aviso</th><th>Contactar</th></tr></thead><tbody id="rbody">${rowsCic(v)}</tbody></table></div>`;
 }
 function rowsCic(v){
   if(!v){const q=(($('rq')||{}).value||'').trim().toLowerCase();v=S.members.filter(x=>!q||String(x.name||'').toLowerCase().includes(q)||String(x.tel||'').replace(/\s/g,'').includes(q.replace(/\s/g,'')))}
   return v.length?v.map(x=>{const n=telNorm(x.tel);const g=memberGps(x.id);return `<tr>
     <td><b>${esc(x.name)}</b></td><td>${esc(x.tel)}</td>
+    <td>${x.eTel?`<b>${esc(x.eName||'Contacto')}</b><div class="hint"><a href="tel:+${telNorm(x.eTel)}" style="color:inherit">📞 ${esc(x.eTel)}</a></div>`:'<span style="color:var(--txt2)">— sin poner</span>'}</td>
     <td><span class="tag ${x.app==='pro'?'pro':'simple'}">${x.app==='pro'?'PRO':'SIMPLE'}</span></td>
     <td>${g.length?g.map(n=>`<span class="tag gp">${esc(n)}</span>`).join(''):'<span style="color:var(--txt2)">—</span>'}</td>
     <td>${fmt(x.t)}</td>
     <td>${pushState(x.id)}</td>
     <td><div class="acts">${n?`<a class="btn sm" href="tel:+${n}">📞 Llamar</a><a class="btn sm" href="https://wa.me/${n}" target="_blank" rel="noopener">💬 WhatsApp</a>`:''}<button class="btn sm red" onclick="cicDel(${jsq(x.id)})" aria-label="Borrar a ${esc(x.name)}">🗑️ Borrar</button></div></td></tr>`}).join('')
-    :`<tr><td colspan="7" class="empty">${S.members.length?'Ningún ciclista coincide con la búsqueda':'Todavía no hay ciclistas registrados'}</td></tr>`;
+    :`<tr><td colspan="8" class="empty">${S.members.length?'Ningún ciclista coincide con la búsqueda':'Todavía no hay ciclistas registrados'}</td></tr>`;
 }
 async function cicDel(id){
   const x=S.members.find(m=>m.id===id);if(!x)return;
@@ -268,7 +270,7 @@ function csv(){
   const q=v=>'"'+String(v??'').replace(/"/g,'""')+'"';
   // v2.6: un nombre que empiece por = + - @ no se ejecuta como fórmula al abrirlo en Excel
   const tx=v=>{const s=String(v??'');return /^[=+\-@\t\r]/.test(s)?"'"+s:s};
-  const rows=[['Ciclista','Móvil','App','Grupetas','Alta / último cambio']].concat(S.members.map(x=>[tx(x.name),x.tel,x.app==='pro'?'Pro':'Simple',tx(memberGps(x.id).join(' / ')),fmt(x.t)]));
+  const rows=[['Ciclista','Móvil','Contacto de emergencia','Teléfono de emergencia','App','Grupetas','Alta / último cambio']].concat(S.members.map(x=>[tx(x.name),x.tel,tx(x.eName||''),x.eTel||'',x.app==='pro'?'Pro':'Simple',tx(memberGps(x.id).join(' / ')),fmt(x.t)]));
   download('ciclistas-villorvinadventure.csv','﻿'+rows.map(r=>r.map(q).join(';')).join('\n'),'text/csv;charset=utf-8');
 }
 
@@ -426,7 +428,7 @@ async function restore(){
   if(!confirm('¿Restaurar la copia del '+fmt(d.at)+'? Se sobrescribe lo que tenga el mismo nombre.'))return;
   const msg=$('rstMsg');msg.textContent='Restaurando…';let n=0,err=0;
   const put=async(col,l,pick)=>{for(const x of (l||[])){if(!x||!x.id||!/^[A-Za-z0-9_-]{1,80}$/.test(x.id))continue;try{await db.collection(col).doc(x.id).set(pick(x));n++}catch(e){err++}}};
-  await put('va_members',d.members,x=>({name:String(x.name||'').slice(0,40),tel:String(x.tel||'').slice(0,20),t:+x.t||Date.now(),app:x.app==='pro'?'pro':'simple'}));
+  await put('va_members',d.members,x=>({name:String(x.name||'').slice(0,40),tel:String(x.tel||'').slice(0,20),t:+x.t||Date.now(),app:x.app==='pro'?'pro':'simple',...(x.eTel?{eTel:String(x.eTel).slice(0,20),eName:String(x.eName||'').slice(0,40)}:{})}));
   await put('va_rutas',d.rutas,x=>({title:String(x.title||'').slice(0,80),date:String(x.date||''),gp:String(x.gp||''),info:String(x.info||'').slice(0,2000),pdf:String(x.pdf||'').slice(0,500),form:String(x.form||'').slice(0,500),days:(x.days||[]).slice(0,14).map(y=>({title:String(y.title||'').slice(0,60),km:String(y.km||'').slice(0,8),gpx:String(y.gpx||'').slice(0,500)})),t:+x.t||Date.now()}));
   await put('va_news',d.news,x=>({title:String(x.title||'').slice(0,80),text:String(x.text||'').slice(0,1500),link:String(x.link||'').slice(0,500),gp:String(x.gp||''),kind:['trip','promo'].includes(x.kind)?x.kind:'news',t:+x.t||Date.now()}));
   await put('va_support',d.support,x=>{const o={uid:String(x.uid||''),name:String(x.name||'').slice(0,40),tel:String(x.tel||'').slice(0,20),text:String(x.text||'').slice(0,1500),t:+x.t||Date.now()};if(x.reply){o.reply=String(x.reply).slice(0,1500);o.replyAt=+x.replyAt||Date.now();o.seen=!!x.seen}return o});
