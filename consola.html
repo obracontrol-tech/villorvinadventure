@@ -152,7 +152,7 @@ auth.onAuthStateChanged(async u=>{
   S.subs.forEach(x=>{try{x()}catch(e){}});S.subs=[];
   S.subs.push(db.collection('config').doc('licencia').onSnapshot(s=>{S.lic=s.exists?{estado:'activo',msg:'',...s.data()}:{estado:'activo',msg:''};render()},e=>console.warn('licencia',e)));
   S.subs.push(db.collection('va_members').onSnapshot(s=>{
-    S.members=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.t||0)-(a.t||0));
+    S.all=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.t||0)-(a.t||0));S.members=dedupMembers(S.all);
     $('gate').style.display='none';$('app').style.display='block';render();
   },e=>{console.warn(e);gate('🔒 <b>Acceso restringido.</b><br>Esta cuenta no tiene permiso para la consola de VillorvinAdventure.',false,true)}));
   S.subs.push(db.collection('va_rutas').onSnapshot(s=>{S.rutas=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.t||0)-(a.t||0));render()},e=>console.warn('rutas',e)));
@@ -228,6 +228,21 @@ function pushState(id){
 }
 
 /* ---------- 👥 Ciclistas ---------- */
+/* v3.7 — Un mismo ciclista puede salir varias veces (otro móvil, o en iPhone la app instalada guarda aparte de Safari).
+   Se agrupan por teléfono: se muestra la ficha más reciente y se guarda la lista de repetidas. */
+function dedupMembers(L){
+  const by=new Map(),out=[];
+  for(const x of L){const k=telNorm(x.tel);if(!k){out.push({...x,dups:[]});continue}
+    const m=by.get(k);if(!m){const y={...x,dups:[]};by.set(k,y);out.push(y)}
+    else{m.dups.push(x.id);if(x.app==='pro')m.app='pro';if(!m.eTel&&x.eTel){m.eTel=x.eTel;m.eName=x.eName}}}
+  return out;
+}
+async function cicDedup(){
+  const ids=S.members.flatMap(x=>x.dups||[]);if(!ids.length){toast('No hay fichas repetidas');return}
+  if(!confirm('Hay '+ids.length+' '+(ids.length===1?'ficha repetida':'fichas repetidas')+' (mismo teléfono que otra más reciente).\n\n¿Las borro y dejo solo la más reciente de cada ciclista?\n\nNo se borra a nadie de la comunidad ni de sus grupetas.'))return;
+  let n=0;for(const id of ids){try{await db.collection('va_members').doc(id).delete();n++}catch(e){console.warn(e)}}
+  toast('🧹 '+n+' '+(n===1?'ficha repetida borrada':'fichas repetidas borradas'));
+}
 function vCiclistas(){
   const q=(($('rq')||{}).value||'').trim().toLowerCase();const wk=Date.now()-7*864e5;const L=S.members;
   const v=L.filter(x=>!q||String(x.name||'').toLowerCase().includes(q)||String(x.tel||'').replace(/\s/g,'').includes(q.replace(/\s/g,'')));
@@ -237,14 +252,14 @@ function vCiclistas(){
     <div class="stat"><b>${L.filter(x=>x.app!=='pro').length}</b><span>En la Simple</span></div>
     <div class="stat"><b>${L.filter(x=>(x.t||0)>wk).length}</b><span>Nuevos esta semana</span></div>
     <div class="stat"><b>${L.filter(x=>!x.eTel).length}</b><span>Sin contacto de emergencia</span></div></div>
-  <div class="bar"><label for="rq" style="position:absolute;left:-9999px">Buscar ciclista</label><input class="inp" id="rq" type="search" placeholder="Buscar por nombre o móvil…" oninput="$('rbody').innerHTML=rowsCic()"><button class="btn" onclick="csv()">⬇️ Descargar lista (Excel)</button></div>
+  <div class="bar"><label for="rq" style="position:absolute;left:-9999px">Buscar ciclista</label><input class="inp" id="rq" type="search" placeholder="Buscar por nombre o móvil…" oninput="$('rbody').innerHTML=rowsCic()"><button class="btn" onclick="csv()">⬇️ Descargar lista (Excel)</button>${L.some(x=>(x.dups||[]).length)?`<button class="btn" onclick="cicDedup()">🧹 Quitar repetidos (${L.reduce((n,x)=>n+(x.dups||[]).length,0)})</button>`:''}</div>
   ${pushTable()}
   <div class="tbl"><table><thead><tr><th>Ciclista</th><th>Móvil</th><th>Contacto de emergencia</th><th>App</th><th>Grupetas</th><th>Alta / último cambio</th><th>Último aviso</th><th>Contactar</th></tr></thead><tbody id="rbody">${rowsCic(v)}</tbody></table></div>`;
 }
 function rowsCic(v){
   if(!v){const q=(($('rq')||{}).value||'').trim().toLowerCase();v=S.members.filter(x=>!q||String(x.name||'').toLowerCase().includes(q)||String(x.tel||'').replace(/\s/g,'').includes(q.replace(/\s/g,'')))}
   return v.length?v.map(x=>{const n=telNorm(x.tel);const g=memberGps(x.id);return `<tr>
-    <td><b>${esc(x.name)}</b></td><td>${esc(x.tel)}</td>
+    <td><b>${esc(x.name)}</b>${(x.dups||[]).length?`<div class="hint" title="La misma persona entró desde otro móvil o navegador">📱 ×${x.dups.length+1} fichas</div>`:''}</td><td>${esc(x.tel)}</td>
     <td>${x.eTel?`<b>${esc(x.eName||'Contacto')}</b><div class="hint"><a href="tel:+${telNorm(x.eTel)}" style="color:inherit">📞 ${esc(x.eTel)}</a></div>`:'<span style="color:var(--txt2)">— sin poner</span>'}</td>
     <td><span class="tag ${x.app==='pro'?'pro':'simple'}">${x.app==='pro'?'PRO':'SIMPLE'}</span></td>
     <td>${g.length?g.map(n=>`<span class="tag gp">${esc(n)}</span>`).join(''):'<span style="color:var(--txt2)">—</span>'}</td>
@@ -417,7 +432,7 @@ function vCopias(){
 function download(name,text,type){const b=new Blob([text],{type});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),4000)}
 function backup(){
   const strip=l=>l.map(({id,...d})=>({id,...d}));
-  const data={app:'VillorvinAdventure',v:1,at:Date.now(),members:strip(S.members),rutas:strip(S.rutas),news:strip(S.news),support:strip(S.support),aviso:S.aviso,
+  const data={app:'VillorvinAdventure',v:1,at:Date.now(),members:strip(S.all||S.members),rutas:strip(S.rutas),news:strip(S.news),support:strip(S.support),aviso:S.aviso,
     club:S.club?{id:S.club.id,name:S.club.name,grupetas:S.club.grupetas||{},gm:S.club.gm||{}}:null};
   const d=new Date();download('copia-villorvinadventure-'+d.toISOString().slice(0,10)+'.json',JSON.stringify(data,null,1),'application/json');toast('✅ Copia descargada');
 }
