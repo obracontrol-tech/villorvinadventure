@@ -99,7 +99,7 @@ tr:last-child td{border-bottom:none}
     </div>
     <nav class="tabs" id="tabs" aria-label="Apartados de la consola"></nav>
     <main id="view"></main>
-    <p class="foot">Asistencia VillorvinAdventure · 610 200 580 · <a href="https://www.villorvinadventure.com/inicio" target="_blank" rel="noopener">villorvinadventure.com</a> · Consola versión 3.3.1</p>
+    <p class="foot">Asistencia VillorvinAdventure · 610 200 580 · <a href="https://www.villorvinadventure.com/inicio" target="_blank" rel="noopener">villorvinadventure.com</a> · Consola versión 3.8.1</p>
   </div>
 </div>
 <div id="toast" role="status" aria-live="polite"></div>
@@ -167,6 +167,7 @@ async function loadClub(myUid){
   try{
     const us=await db.collection('users').doc(myUid).get();let C=us.exists?us.data().group:null;
     // v3.8 — si esta cuenta no está unida a la comunidad, se busca por su nombre (solo puede la cuenta del propietario)
+    if(!C){try{const k=localStorage.getItem('va_cons_club')||'';if(/^[A-Z0-9]{6}$/.test(k))C=k}catch(e){}}
     if(!C){try{const q=await db.collection('groups').get();const d=q.docs.find(x=>/villorvin/i.test(String(x.data().name||'')));if(d){C=d.id;S.clubFound=true}}catch(e){}}
     if(!C){S.club=null;S.clubId=null;render();return}
     S.clubId=C;
@@ -293,11 +294,20 @@ function csv(){
 
 /* ---------- 🏷️ Grupetas ---------- */
 function clubWarn(){
-  if(!S.clubId)return `<div class="warn">⚠️ <b>Esta cuenta de Google no está unida a la comunidad en la app.</b><br>Para gestionar las grupetas desde aquí, en el móvil de la organización abre la app → <b>Perfil → Tu cuenta de Google → Guardar mi cuenta con Google</b> y elige <b>esta misma cuenta</b>. Después recarga la consola.</div>`;
+  if(!S.clubId)return `<div class="box" style="border:2px solid #4DA3FF"><h2>🔑 Escribe el código de la comunidad</h2>
+    <p class="hint">Esta consola no sabe cuál es tu comunidad. Escribe su código de 6 letras y se recordará en este ordenador.</p>
+    <div class="row" style="margin-top:8px"><input class="inp" id="ccIn" maxlength="6" placeholder="Ej. K3V9PA" style="flex:0 1 180px;width:auto;text-transform:uppercase;letter-spacing:3px"><button class="btn pri" onclick="setConsClub()">Usar este código</button></div>
+    <p class="hint" style="margin-top:8px">¿No lo tienes? En Firebase → Firestore → <b>Datos</b> → colección <b>groups</b>: el documento cuyo <b>name</b> es VillorvinAdventure; su nombre (6 letras) es el código.</p></div>
+    <div class="warn">⚠️ <b>Esta cuenta de Google no está unida a la comunidad en la app.</b><br>Para gestionar las grupetas desde aquí, en el móvil de la organización abre la app → <b>Perfil → Tu cuenta de Google → Guardar mi cuenta con Google</b> y elige <b>esta misma cuenta</b>. Después recarga la consola.</div>`;
   if(!S.club)return `<div class="warn">Cargando la comunidad…</div>`;
   if(!S.isAdm)return `<div class="warn">⚠️ Esta cuenta está en la comunidad <b>${esc(S.club.name)}</b>, pero no es administradora. Pide al creador de la comunidad que te haga administrador.</div>`;
   return '';
 }
+/* v3.8.1 — Código de la comunidad escrito a mano (se recuerda en este ordenador) */
+async function setConsClub(){const c=(($('ccIn')||{}).value||'').trim().toUpperCase().replace(/[^A-Z0-9]/g,'');
+  if(c.length!==6){toast('El código tiene 6 letras o números');return}
+  try{const d=await db.collection('groups').doc(c).get();if(!d.exists){alert('No existe ninguna comunidad con el código «'+c+'». Revísalo letra a letra.');return}
+    try{localStorage.setItem('va_cons_club',c)}catch(e){}toast('✅ Comunidad «'+(d.data().name||c)+'» cargada');loadClub(firebase.auth().currentUser.uid)}catch(e){fail(e)}}
 /* v3.8 — 🔑 Códigos de la comunidad y de cada grupeta, siempre a la vista */
 function copyTxt(t){try{navigator.clipboard.writeText(t).then(()=>toast('📋 Copiado: '+t)).catch(()=>prompt('Copia el código:',t))}catch(e){prompt('Copia el código:',t)}}
 function codesBox(){
