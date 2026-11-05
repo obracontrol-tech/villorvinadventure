@@ -1174,7 +1174,7 @@ button,.btn,.li,.chip,.mini,.lvcatch,[onclick]{touch-action:manipulation;-webkit
     <button class="li" onclick="deleteAccount()"><span class="em">🗑️</span><div><b style="color:var(--red)">Borrar mi cuenta y mis datos</b><small>No se puede deshacer</small></div><svg class="i chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></button>
   </div>
   <div class="shopline" id="shopLine" style="display:none"></div>
-  <p style="color:var(--txt2);font-size:13px;text-align:center;margin-top:20px">VillorvinAdventure Pro · versión 3.5.0</p>
+  <p style="color:var(--txt2);font-size:13px;text-align:center;margin-top:20px">VillorvinAdventure Pro · versión 3.6.0</p>
 </section>
 
 <!-- ============ BARRA INFERIOR ============ -->
@@ -2567,10 +2567,80 @@ async function rankDelete(g){
   try{await db.collection('rank').doc(C+'_'+g).delete();toast('Ranking borrado');if($('rankAll'))renderRankAll();if($('caBody'))openClubAdmin('rank')}catch(e){fbErr(e,'borrar el ranking')}
 }
 
+/* ===== VA 3.6 — Grupetas de los ciclistas: cada uno crea la suya con un código; se entra con el código =====
+   Las grupetas de la organización (sin código) se ven y se puede uno apuntar; las de los ciclistas solo las ven sus miembros.
+   Reglas de Firebase v3.5 (gpLast + gpmsgs). */
+const gpOwn=x=>!!(x&&x.by&&x.by===uid);
+const gpVisible=x=>!x.code||myGps().includes(x.id)||gpOwn(x)||isBossOf(myGroup?.id);
+function gpListHTML(adm){
+  const mine=myGps(),L=grupetas().filter(gpVisible);
+  if(!L.length)return `<div class="empty" style="margin-bottom:10px">Aún no hay grupetas. ¡Crea la primera!</div>`;
+  return L.map(x=>{const on=mine.includes(x.id),own=gpOwn(x),nm=gpMembers(x.id);
+    return `<div class="li gprow" style="cursor:default;margin-bottom:8px;align-items:flex-start${on?';border-color:var(--lime)':''}"><span class="em">${GP_ICO[x.mod]||'🚴'}</span><div style="flex:1;min-width:0"><b>${esc(x.name)}</b><small>${[x.mod,x.lvl].filter(Boolean).map(esc).join(' · ')} · ${nm.length} ${nm.length===1?'ciclista':'ciclistas'}${x.code?'':' · ⛰️ de VillorvinAdventure'}${own?' · 👑 la creaste tú':''}</small>${on&&nm.length?`<small style="display:block;color:var(--txt);margin-top:2px">👥 ${nm.map(esc).join(', ')}</small>`:''}${x.code&&(on||own)?`<small style="display:block;margin-top:4px">🔑 Código: <b style="color:var(--lime);letter-spacing:.12em">${esc(x.code)}</b></small>`:''}
+     <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">${on?`<button class="mini lime" onclick="openGpChat(${jsq(x.id)})">💬 Chat</button>`:''}${x.code&&(on||own)?`<button class="mini" onclick="gpShare(${jsq(x.id)})">📲 Invitar</button>`:''}${on?`<button class="mini" onclick="gpToggle(${jsq(x.id)})">Salir</button>`:x.code?'':`<button class="mini lime" onclick="gpToggle(${jsq(x.id)})">Unirme</button>`}${own?`<button class="mini" style="color:var(--red)" onclick="gpDelMine(${jsq(x.id)})" aria-label="Eliminar grupeta">🗑️</button>`:''}</div></div></div>`}).join('');
+}
+async function gpCreateMine(){
+  if(!myGroup){toast('Entra primero en la comunidad');return}if(!ready())return;
+  if(grupetas().filter(gpOwn).length>=3){toast('Puedes crear hasta 3 grupetas');return}
+  const name=(prompt('Nombre de tu grupeta (ej. MTB del sábado)','')||'').trim().slice(0,30);if(!name)return;
+  const i=await askChoice('¿De qué modalidad es «'+name+'»?',GP_MODS.map(m=>[(GP_ICO[m]||(m==='Senderismo'?'🥾':'🚴'))+' '+m,'',m]));if(i<0)return;
+  const used=new Set(grupetas().map(x=>x.code).filter(Boolean));let code;do{code=newCode()}while(used.has(code));
+  const id='u'+Date.now().toString(36);const nx=[...myGps(),id].slice(-20);
+  try{await db.collection('groups').doc(myGroup.id).update({['grupetas.'+id]:{name,mod:GP_MODS[i],lvl:'',resp:{[uid]:myName()},by:uid,code,t:Date.now()},['gm.'+uid]:nx,gpLast:id});
+    alert('✅ Grupeta «'+name+'» creada.\n\nSu código es: '+code+'\n\nPásalo a tus compañeros (botón «📲 Invitar») para que entren.');setTimeout(()=>openGroup(),300)}
+  catch(e){fbErr(e,'crear la grupeta')}
+}
+async function gpJoinCode(){
+  if(!myGroup){toast('Entra primero en la comunidad');return}if(!ready())return;
+  const c=(prompt('Escribe el código de la grupeta (6 letras/números)','')||'').trim().toUpperCase().replace(/[^A-Z0-9]/g,'');if(!c)return;
+  const x=grupetas().find(g=>g.code===c);
+  if(!x){alert('No hay ninguna grupeta con el código «'+c+'».\n\nRevisa letra a letra el código que te han pasado.');return}
+  if(myGps().includes(x.id)){toast('Ya estás en «'+x.name+'»');return}
+  if(myGps().length>=20){toast('Puedes estar en 20 grupetas como máximo');return}
+  gpToggle(x.id);
+}
+async function gpDelMine(id){
+  const x=(myGroup?.grupetas||{})[id];if(!x||x.by!==uid)return;
+  if(!await askConfirm('¿Eliminar grupeta?',`¿Seguro que quieres eliminar «${x.name}»? Sus salidas pasarán a ser de toda la comunidad. No se puede deshacer.`,'Eliminar'))return;
+  const nx=myGps().filter(k=>k!==id);
+  try{await db.collection('groups').doc(myGroup.id).update({['grupetas.'+id]:FV.delete(),['gm.'+uid]:nx.length?nx:FV.delete(),gpLast:id});toast('Grupeta eliminada');setTimeout(()=>openGroup(),350)}catch(e){fbErr(e,'eliminar la grupeta')}
+}
+function gpShare(id){const x=(myGroup?.grupetas||{})[id];if(!x||!x.code)return;
+  const t=`🚴 Únete a mi grupeta «${x.name}» en la app VillorvinAdventure\n\n1️⃣ Abre la app: ${appUrl()}\n2️⃣ Comunidad → Mis grupetas → «🔑 Tengo un código»\n3️⃣ Escribe el código: *${x.code}*`;
+  window.open('https://wa.me/?text='+encodeURIComponent(t),'_blank')}
+/* Chat de cada grupeta (sin avisos: los avisos van a la salida y a la organización) */
+let gpChat={unsub:null,msgs:[],id:null};
+const gpNew=id=>{try{const L=(window.gpLastMsg||{})[id];return !!(L&&L>store.get('gpSeen_'+id,0))}catch(e){return false}};
+function openGpChat(id){
+  const x=(myGroup?.grupetas||{})[id];if(!x||!myGroup||!db)return;
+  if(!myGps().includes(id)){toast('Apúntate a la grupeta para usar su chat');return}
+  $('rideBody').innerHTML=sheetHead('💬 '+esc(x.name))+`<p style="color:var(--txt2);margin:-8px 0 10px">Chat de la grupeta · solo lo ven sus miembros</p>
+   <div class="chat"><div class="chatlist" id="gpChatList" style="max-height:52vh"><div class="empty" style="padding:12px">Cargando…</div></div>
+   <div class="chatin"><input class="inp" id="gpChatIn" maxlength="300" placeholder="Escribe a la grupeta…" enterkeyhint="send" onkeydown="if(event.key==='Enter')gpSend()"><button class="btn btn-lime" style="width:auto;min-height:52px;padding:0 18px" onclick="gpSend()">Enviar</button></div></div>
+   <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px">${x.code?`<button class="btn btn-line" onclick="gpShare(${jsq(id)})">📲 Invitar</button>`:''}<button class="btn btn-line" style="${x.code?'':'grid-column:1/-1'}" onclick="openGroup()">🏷️ Grupetas</button></div>`;
+  openRideId=null;openSheet('sh-ride');gpChat.id=id;gpChat.msgs=[];
+  if(gpChat.unsub)try{gpChat.unsub()}catch(e){}
+  gpChat.unsub=db.collection('groups').doc(myGroup.id).collection('gpmsgs').where('gp','==',id).limit(300).onSnapshot(s=>{
+    if(!$('gpChatList')){try{gpChat.unsub()}catch(e){}gpChat.unsub=null;return}
+    gpChat.msgs=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(a.ts||0)-(b.ts||0)).slice(-150);renderGpChat();
+    store.set('gpSeen_'+id,Date.now());try{renderGroup()}catch(e){}
+  },e=>{console.warn('chat grupeta',e);const l=$('gpChatList');if(l)l.innerHTML='<div class="empty" style="padding:12px">No se pudo cargar el chat. Si acabas de actualizar, hay que publicar las reglas v3.5 en Firebase.</div>'});
+}
+function renderGpChat(){
+  const l=$('gpChatList');if(!l)return;
+  const canMod=isClubAdm()||!!(myGroup&&(myGroup.captains||{})[uid])||isAdmin;
+  l.innerHTML=gpChat.msgs.length?gpChat.msgs.map(m=>{const mine=m.uid===uid;
+    return `<div class="msg${mine?' me':''}">${mine?'':`<span class="face" style="width:30px;height:30px;margin:0;flex-shrink:0;background:${colorOf(m.name)}">${ini(m.name)}</span>`}<div class="bub"><div class="mh"><b>${mine?'Tú':esc(m.name)}</b><small>${msgTime(m.ts)}</small>${mine||canMod?`<button aria-label="Borrar mensaje" onclick="gpDel(${jsq(m.id)})">✕</button>`:''}</div><p>${esc(m.text)}</p></div></div>`}).join('')
+    :'<div class="empty" style="padding:12px">Aún no hay mensajes. ¡Saluda a tu grupeta! 👋</div>';
+  l.scrollTop=l.scrollHeight;
+}
+function gpSend(){if(!ready()||!myGroup||!gpChat.id)return;const inp=$('gpChatIn');const text=inp.value.trim().slice(0,300);if(!text)return;inp.value='';
+  db.collection('groups').doc(myGroup.id).collection('gpmsgs').add({uid,name:myName(),text,ts:Date.now(),gp:gpChat.id}).catch(netErr)}
+function gpDel(id){if(!myGroup)return;db.collection('groups').doc(myGroup.id).collection('gpmsgs').doc(id).delete().catch(netErr)}
 /* ---- Grupetas: el ciclista se apunta solo; el administrador puede cambiarlo ---- */
 async function gpToggle(id){
   if(!myGroup||!ready())return;const cur=myGps();const on=cur.includes(id);const nx=on?cur.filter(x=>x!==id):[...cur,id];
-  try{await db.collection('groups').doc(myGroup.id).update({['gm.'+uid]:nx.length?nx:FV.delete()});toast(on?'Has salido de «'+gpName(id)+'»':'✅ Te has apuntado a «'+gpName(id)+'»');setTimeout(()=>{if($('sh-ride').classList.contains('show'))openGroup()},350)}catch(e){fbErr(e,'cambiar tus grupetas')}
+  try{await db.collection('groups').doc(myGroup.id).update({['gm.'+uid]:nx.length?nx:FV.delete()});toast(on?'Has salido de «'+gpName(id)+'»':'✅ Ya estás en «'+gpName(id)+'»');setTimeout(()=>{if($('sh-ride').classList.contains('show'))openGroup()},350)}catch(e){fbErr(e,'cambiar tus grupetas')}
 }
 async function assignGps(k){
   const g=myGroup;if(!g||!isClubAdm())return;const n=g.members[k]||'Ciclista';
@@ -2600,7 +2670,7 @@ async function gpSave(id){
   const g=myGroup;const name=$('gpN').value.trim().slice(0,30);if(!name){toast('Pon un nombre a la grupeta');return}
   const resp={};document.querySelectorAll('#gpR .chip.on').forEach(c=>resp[c.dataset.k]=g.members[c.dataset.k]);
   const nid=id||('g'+Date.now().toString(36));
-  try{await db.collection('groups').doc(g.id).update({['grupetas.'+nid]:{name,mod:chipVal('gpM')||'Carretera',lvl:chipVal('gpL')||'',resp,t:Date.now()}});toast(id?'Grupeta guardada':'✅ Grupeta creada');setTimeout(()=>openClubAdmin('gps'),350)}catch(e){fbErr(e,'guardar la grupeta')}
+  try{await db.collection('groups').doc(g.id).update({['grupetas.'+nid]:{...(((g.grupetas||{})[nid]||{}).by?{by:g.grupetas[nid].by}:{}),...(((g.grupetas||{})[nid]||{}).code?{code:g.grupetas[nid].code}:{}),name,mod:chipVal('gpM')||'Carretera',lvl:chipVal('gpL')||'',resp,t:Date.now()}});toast(id?'Grupeta guardada':'✅ Grupeta creada');setTimeout(()=>openClubAdmin('gps'),350)}catch(e){fbErr(e,'guardar la grupeta')}
 }
 async function gpDelete(id){
   const g=myGroup;const n=gpName(id);
@@ -2704,9 +2774,9 @@ function renderGroup(){
   if(!g){box.innerHTML=`<div class="empty"><svg class="i" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 4.5a3.5 3.5 0 0 1 0 7M21.5 20a6.5 6.5 0 0 0-4-6"/></svg>Todavía no estás en la comunidad VillorvinAdventure.<br><small style="color:var(--txt2)">Entra con el código que te da la organización y apúntate a tus grupetas.</small>
      <button class="btn btn-lime" style="max-width:280px" onclick="joinGroupAsk()">🔗 Entrar en la comunidad</button></div>`;return}
   const mine=grupetas().filter(x=>myGps().includes(x.id));
-  box.innerHTML=(mine.length?mine.map(x=>{const n=gpMembers(x.id).length;return `<div class="li" onclick="openGroup()" style="margin-bottom:8px;border-color:var(--lime)"><span class="em">${GP_ICO[x.mod]||'🚴'}</span><div><b>${esc(x.name)}</b><small>${[x.mod,x.lvl].filter(Boolean).map(esc).join(' · ')} · ${n} ${n===1?'ciclista':'ciclistas'}</small></div><svg class="i chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></div>`}).join('')
-    :`<div class="empty" style="padding:14px">Aún no estás en ninguna grupeta.<br><small style="color:var(--txt2)">Apúntate a las de la comunidad y verás sus salidas, su chat y su ranking.</small></div>`)
-   +`<button class="btn btn-line" style="margin-top:4px" onclick="openGroup()">🏷️ ${mine.length?'Ver todas las grupetas':'Ver grupetas y apuntarme'}</button>`
+  box.innerHTML=(mine.length?mine.map(x=>{const n=gpMembers(x.id).length;const nw=gpNew(x.id);return `<div class="li" onclick="openGpChat(${jsq(x.id)})" style="margin-bottom:8px;border-color:var(--lime)"><span class="em">${GP_ICO[x.mod]||'🚴'}</span><div><b>${esc(x.name)}</b><small>${[x.mod,x.lvl].filter(Boolean).map(esc).join(' · ')} · ${n} ${n===1?'ciclista':'ciclistas'} · 💬 chat${nw?' <b style="color:var(--lime)">· nuevo</b>':''}</small></div><svg class="i chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></div>`}).join('')
+    :`<div class="empty" style="padding:14px">Aún no estás en ninguna grupeta.<br><small style="color:var(--txt2)">Crea la tuya o entra con el código que te pase un compañero.</small></div><button class="btn btn-line" style="margin-bottom:8px" onclick="openGroup()">🏷️ Ver las grupetas de la comunidad</button>`)
+   +`<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px"><button class="btn btn-line" onclick="gpCreateMine()">➕ Crear grupeta</button><button class="btn btn-line" onclick="gpJoinCode()">🔑 Tengo un código</button></div>`
    +(g.notice?.text?`<small style="display:block;margin-top:8px;color:var(--lime);font-weight:700">📣 ${esc(g.notice.text)}</small>`:'');
 }
 async function createGroup(){
@@ -2780,8 +2850,9 @@ function openGroup(){
    ${boss?`<div class="li" style="cursor:default;margin-bottom:12px;border-color:var(--bronze)"><span class="em">${adm?'🛡️':'⭐'}</span><div><b>${myRole}</b><small>${adm?'Gestionas grupetas, salidas, rutas, ranking y ciclistas de esta comunidad (y solo de esta comunidad).':'Puedes editar y cancelar las salidas de la comunidad, borrar comentarios y quitar ciclistas (toca su nombre).'}</small></div></div>
    <button class="btn btn-line" style="margin-bottom:12px" onclick="groupNotice()">📣 ${g.notice?.text?'Cambiar aviso a la comunidad':'Poner un aviso a la comunidad'}</button>`:''}
    <div class="sec"><h3 style="font-size:18px">🏷️ Grupetas</h3></div>
-   <small style="display:block;color:var(--txt2);margin:-6px 4px 10px">Apúntate a las tuyas: verás sus salidas, rutas y ranking.</small>
-   ${gps.length?gps.map(x=>{const on=mine.includes(x.id);const nm=gpMembers(x.id);return `<div class="li gprow" style="cursor:default;margin-bottom:8px${on?';border-color:var(--lime)':''}"><span class="em">${GP_ICO[x.mod]||'🚴'}</span><div><b>${esc(x.name)}</b><small>${[x.mod,x.lvl].filter(Boolean).map(esc).join(' · ')}${' · '+nm.length+(nm.length===1?' ciclista':' ciclistas')}${Object.keys(x.resp||{}).length?' · 🎯 '+Object.values(x.resp).map(esc).join(', '):''}</small>${on&&nm.length?`<small style="display:block;color:var(--txt);margin-top:2px">👥 ${nm.map(esc).join(', ')}</small>`:''}</div><button class="mini${on?'':' lime'}" onclick="gpToggle(${jsq(x.id)})">${on?'Salir':'Unirme'}</button></div>`}).join(''):`<div class="empty" style="margin-bottom:10px">${adm?'Aún no hay grupetas. Créalas en «Administración de la comunidad».':'La comunidad aún no tiene grupetas.'}</div>`}
+   <small style="display:block;color:var(--txt2);margin:-6px 4px 10px">Crea tu grupeta o entra en una con su código: verás sus salidas, su chat y su ranking.</small>
+   <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px"><button class="btn btn-lime" onclick="gpCreateMine()">➕ Crear grupeta</button><button class="btn btn-line" onclick="gpJoinCode()">🔑 Tengo un código</button></div>
+   ${gpListHTML(adm)}
    <div class="codebox" style="margin-top:14px"><small>Código de la comunidad</small><b>${g.id}</b></div>
    <button class="btn btn-lime" style="margin-bottom:10px" onclick="shareGroup()">💬 Invitar por WhatsApp</button>
    <button class="btn btn-line" style="margin-bottom:18px" onclick="closeSheets();openCreate()">📅 Crear salida de la comunidad</button>
@@ -7477,7 +7548,7 @@ function showOnb(){if($('onb').classList.contains('show'))return;onbI=0;paintOnb
 function paintOnb(){
   const [e,t,p]=ONB[onbI];
   const ec=emerC();
-  $('onbSlide').innerHTML=`<div class="big">${e}</div><h2>${t}</h2><p>${p}</p>${onbI===2?`<input class="inp" id="onbName" placeholder="A. Nombre y apellido (no el correo)" maxlength="40" autocomplete="name" value="${esc(me&&me.name||'')}"><input class="inp" id="onbTel" type="tel" inputmode="tel" placeholder="B. Tu teléfono (ej. 600 123 456)" maxlength="20" autocomplete="tel" style="margin-top:8px" value="${esc(store.get('vaTel',''))}"><input class="inp" id="onbETel" type="tel" inputmode="tel" placeholder="C. Teléfono de emergencia" maxlength="20" autocomplete="off" style="margin-top:8px" value="${esc(ec.tel)}"><input class="inp" id="onbERel" placeholder="D. Parentesco y/o nombre (ej. Mujer · Ana)" maxlength="40" autocomplete="off" style="margin-top:8px" value="${esc(ec.name)}"><small style="color:var(--txt2);max-width:320px;margin-top:6px">El teléfono de emergencia es de un familiar o amigo: le avisamos si tienes un accidente.</small><small style="color:var(--txt2);max-width:320px">Al empezar aceptas la <a href="https://www.villorvinadventure.com/pol%C3%ADtica-y-condiciones" target="_blank" rel="noopener" style="color:var(--lime)">privacidad y condiciones</a> de VillorvinAdventure.</small>`:''}${onbI===3?`<div class="safef"><small>${FD_APP_TXT}</small><button class="btn btn-line" type="button" onclick="fallAsk(true)">🧪 Ver cómo es el aviso de caída</button></div>`:''}`;
+  $('onbSlide').innerHTML=`<div class="big">${e}</div><h2>${t}</h2><p>${p}</p>${onbI===2?`<input class="inp" id="onbName" placeholder="A. Nombre y apellido (no el correo)" maxlength="24" autocomplete="name" value="${esc(me&&me.name||'')}"><input class="inp" id="onbTel" type="tel" inputmode="tel" placeholder="B. Tu teléfono (ej. 600 123 456)" maxlength="20" autocomplete="tel" style="margin-top:8px" value="${esc(store.get('vaTel',''))}"><input class="inp" id="onbETel" type="tel" inputmode="tel" placeholder="C. Teléfono de emergencia" maxlength="20" autocomplete="off" style="margin-top:8px" value="${esc(ec.tel)}"><input class="inp" id="onbERel" placeholder="D. Parentesco y/o nombre (ej. Mujer · Ana)" maxlength="40" autocomplete="off" style="margin-top:8px" value="${esc(ec.name)}"><small style="color:var(--txt2);max-width:320px;margin-top:6px">El teléfono de emergencia es de un familiar o amigo: le avisamos si tienes un accidente.</small><small style="color:var(--txt2);max-width:320px">Al empezar aceptas la <a href="https://www.villorvinadventure.com/pol%C3%ADtica-y-condiciones" target="_blank" rel="noopener" style="color:var(--lime)">privacidad y condiciones</a> de VillorvinAdventure.</small>`:''}${onbI===3?`<div class="safef"><small>${FD_APP_TXT}</small><button class="btn btn-line" type="button" onclick="fallAsk(true)">🧪 Ver cómo es el aviso de caída</button></div>`:''}`;
   $('onbDots').innerHTML=ONB.map((_,i)=>`<i class="${i===onbI?'on':''}"></i>`).join('');
   $('onbNext').textContent=onbI===3?'¡Empezar!':onbI===2?'💾 Guardar y continuar':'Siguiente';
 }
@@ -7514,7 +7585,7 @@ function safeLaterClose(){store.set('safeLater',Date.now());closeSheets()}
 $('onbNext').onclick=()=>{
   if(onbI<2){onbI++;paintOnb();return}
   if(onbI===3){onbDone(false);return}
-  const n=$('onbName').value.trim().slice(0,40);if(n.split(/\s+/).filter(Boolean).length<2){toast('Escribe tu nombre y apellido');return}
+  const n=$('onbName').value.trim().slice(0,24);if(n.split(/\s+/).filter(Boolean).length<2){toast('Escribe tu nombre y apellido');return}
   const vt=($('onbTel').value||'').trim().slice(0,20);if(telNorm(vt).length<9){toast('Escribe tu número de teléfono');return}
   const et=($('onbETel').value||'').trim().slice(0,20);if(telNorm(et).length<9){toast('Escribe el teléfono de emergencia');return}
   const er=($('onbERel').value||'').trim().slice(0,40);if(!er){toast('Escribe el parentesco y/o nombre de tu contacto');return}
