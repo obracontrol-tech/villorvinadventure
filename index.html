@@ -1075,7 +1075,7 @@ html:not(.rs-simple) .rs-sonly{display:none!important}
   </div>
 
   <div class="block">
-    <div class="sec"><h3>Próximas salidas</h3><a onclick="openAllRides()">Ver todas <svg class="i" viewBox="0 0 24 24" style="width:18px"><path d="m9 6 6 6-6 6"/></svg></a></div>
+    <div class="sec"><h3>Próximas salidas<span id="newRidesB"></span></h3><a onclick="openAllRides()">Ver todas <svg class="i" viewBox="0 0 24 24" style="width:18px"><path d="m9 6 6 6-6 6"/></svg></a></div>
     <div class="rides" id="nextRides"></div>
   </div>
 
@@ -1206,7 +1206,7 @@ html:not(.rs-simple) .rs-sonly{display:none!important}
   </div>
   <button class="li rs-pro" style="margin-top:14px" onclick="openPro()"><span class="em">⭐</span><div><b>Solicita la Pro de VillorvinAdventure</b><small>Para miembros. Misma cuenta, mismos datos.</small></div></button>
   <div class="shopline" id="shopLine" style="display:none"></div>
-  <p style="color:var(--txt2);font-size:13px;text-align:center;margin-top:20px">VillorvinAdventure Simple · versión 3.9.0</p>
+  <p style="color:var(--txt2);font-size:13px;text-align:center;margin-top:20px">VillorvinAdventure Simple · versión 3.9.1</p>
 </section>
 
 <!-- ============ BARRA INFERIOR ============ -->
@@ -1654,7 +1654,7 @@ function rideCard(r,full){
   const meet=r.meet&&r.meet!==r.start?`<div class="pt"><span class="ico">📍</span><span>Encuentro: <b>${esc(r.meet)}</b>${r.meetHour?' · '+esc(r.meetHour):''}</span></div>`:`<div class="pt"><span class="ico">📍</span><span>Encuentro en el mismo punto</span></div>`;
   return `<div class="ride${full?' full':''}" onclick="openRide(${jsq(r.id)})">
     <div class="when"><div><div class="date">${fmtDate(r.date)}</div><div class="hour num">${esc(r.hour)}</div></div>
-    <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end">${hasNewMsg(r)?'<span class="tag lime">💬 nuevo</span>':''}${rideLogo(r)?`<img class="clogo sm" src="${rideLogo(r)}" alt="Club">`:''}${rideOrg(r)?'<span class="tag" style="background:#0B3A78;color:#fff;border-color:#4DA3FF">⛰️ VillorvinAdventure</span>':r.gp&&gpName(r.gp)?`<span class="tag">🏷️ ${esc(gpName(r.gp))}</span>`:r.open||r.guest?'<span class="tag">🌍 Pública</span>':''}${r.type?`<span class="tag lime">${esc(r.type)}</span>`:''}${r.km?`<span class="tag num">${+r.km} km</span>`:''}${r.route?`<span class="tag num">+${r.route.up} m</span>`:''}</div></div>
+    <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end">${rideNew(r)?'<span class="tag" style="background:#EF4444;color:#fff;border-color:#EF4444;font-weight:800">🆕 Nueva de tu grupeta</span>':''}${hasNewMsg(r)?'<span class="tag lime">💬 nuevo</span>':''}${rideLogo(r)?`<img class="clogo sm" src="${rideLogo(r)}" alt="Club">`:''}${rideOrg(r)?'<span class="tag" style="background:#0B3A78;color:#fff;border-color:#4DA3FF">⛰️ VillorvinAdventure</span>':r.gp&&gpName(r.gp)?`<span class="tag">🏷️ ${esc(gpName(r.gp))}</span>`:r.open||r.guest?'<span class="tag">🌍 Pública</span>':''}${r.type?`<span class="tag lime">${esc(r.type)}</span>`:''}${r.km?`<span class="tag num">${+r.km} km</span>`:''}${r.route?`<span class="tag num">+${r.route.up} m</span>`:''}</div></div>
     <div class="title">${esc(r.title||'Salida en grupo')}</div>
     <div class="pt"><span class="ico">🚩</span><span>Salida: <b>${esc(r.start)}</b></span></div>${meet}
     ${r.plan&&r.plan.text?`<div class="pt pl"><span class="ptag">Recorrido</span><span class="clip2">${esc(r.plan.text)}</span></div>`:''}
@@ -1670,6 +1670,7 @@ function renderRides(){
   else $('nextRides').innerHTML=up.length?up.slice(0,6).map(r=>rideCard(r)).join(''):`<div class="empty" style="flex:1 0 100%">${me?.group?'Aún no hay salidas próximas en tu comunidad.<br>¡Crea la primera y avisa a tu grupeta!':'Únete a tu comunidad para ver sus salidas.<br><button class="btn btn-line" style="max-width:240px;margin-top:8px" onclick="joinGroupAsk()">🔗 Unirme a mi comunidad</button>'}</div>`;
   const mine=up.filter(joined);
   $('myRides').innerHTML=mine.length?mine.map(r=>rideCard(r,true)).join(''):`<div class="empty"><svg class="i" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="3"/><path d="M3 9h18M8 2v4m8-4v4"/></svg>Todavía no te has apuntado a ninguna salida<button class="btn btn-lime" style="max-width:240px" onclick="openCreate()">Crear salida</button></div>`;
+  try{const nb=$('newRidesB');if(nb)nb.innerHTML=ubadge(newRidesAll());const t=document.querySelector('.tab[data-tab="comunidad"]');if(t)t.classList.toggle('hasUnread',unreadAll()>0)}catch(e){}
   renderStats();renderRank();renderCatchHome();
   if($('sh-all').classList.contains('show'))renderAll();
   fillWx();
@@ -1820,6 +1821,7 @@ async function openRide(id,keep){
   if(!r&&db){try{const s=await db.collection('rides').doc(id).get();if(s.exists){r={id:s.id,...s.data()};if(!rides.some(x=>x.id===r.id))rides.push(r)}}catch(e){}}
   if(r&&!isAdmin&&!canSeeRideUI(r))r=null;   // v4.0: nunca se muestra una salida de otro club
   if(!r){if(!keep)toast('Esta salida no existe o es privada de otra grupeta');return}
+  if(rideNew(r))rideSeen(r.id);
   const _ci=$('chatIn'),draft=_ci?_ci.value:'',focused=document.activeElement===_ci,_sh=$('sh-ride').scrollTop;
   openRideId=id;const inR=joined(r);const meetPt=r.meet||r.start;const isToday=r.date===iso(new Date());const p=names(r);
   $('rideBody').innerHTML=`
@@ -2553,7 +2555,7 @@ function watchClubData(){
   if(key===clubSubKey)return;clubSubKey=key;
   clubSubs.forEach(f=>{try{f()}catch(e){}});clubSubs=[];
   ridesClub=[];ridesMine=[];feed=[];pois=[];rides=[];
-  const merge=()=>{const m=new Map();[...Object.values(ridesGuest),...ridesClub,...ridesMine].forEach(r=>m.set(r.id,r));rides=[...m.values()];ridesLoaded=true;renderRides();drawRideMarkers();
+  const merge=()=>{const m=new Map();[...Object.values(ridesGuest),...ridesClub,...ridesMine].forEach(r=>m.set(r.id,r));rides=[...m.values()];ridesLoaded=true;renderRides();drawRideMarkers();try{renderGroup()}catch(e){}
     if(openRideId&&$('sh-ride').classList.contains('show'))openRide(openRideId,true)};
   window.clubMerge=merge;watchMyReqs();
   const docs=s=>s.docs.map(d=>({id:d.id,...d.data()}));
@@ -2828,7 +2830,7 @@ function renderGroup(){
   if(!g){box.innerHTML=`<div class="empty"><svg class="i" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 4.5a3.5 3.5 0 0 1 0 7M21.5 20a6.5 6.5 0 0 0-4-6"/></svg>Todavía no estás en la comunidad VillorvinAdventure.<br><small style="color:var(--txt2)">Entra con el código que te da la organización y apúntate a tus grupetas.</small>
      <button class="btn btn-lime" style="max-width:280px" onclick="joinGroupAsk()">🔗 Entrar en la comunidad</button></div>`;return}
   const mine=grupetas().filter(x=>myGps().includes(x.id));
-  box.innerHTML=(mine.length?mine.map(x=>{const n=gpMembers(x.id).length;const nw=unreadGp(x.id);return `<div class="li" onclick="openGpChat(${jsq(x.id)})" style="margin-bottom:8px;border-color:var(--lime)"><span class="em">${GP_ICO[x.mod]||'🚴'}</span><div><b>${esc(x.name)}</b><small>${[x.mod,x.lvl].filter(Boolean).map(esc).join(' · ')} · ${n} ${n===1?'ciclista':'ciclistas'} · 💬 chat</small></div>${ubadge(nw)}<svg class="i chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></div>`}).join('')
+  box.innerHTML=(mine.length?mine.map(x=>{const n=gpMembers(x.id).length;const nw=unreadGp(x.id),nrL=(()=>{try{return upcoming().filter(r=>r.gp===x.id&&rideNew(r))}catch(e){return []}})(),nr=nrL.length;return `<div class="li" onclick="openGpChat(${jsq(x.id)})" style="margin-bottom:8px;border-color:var(--lime)"><span class="em">${GP_ICO[x.mod]||'🚴'}</span><div><b>${esc(x.name)}</b><small>${[x.mod,x.lvl].filter(Boolean).map(esc).join(' · ')} · ${n} ${n===1?'ciclista':'ciclistas'} · 💬 chat</small>${nr?`<button class="mini" style="margin-top:6px;background:#EF4444;color:#fff;border-color:#EF4444;font-weight:800" onclick="event.stopPropagation();openRide(${jsq(nrL[0].id)})">🆕 ${nr===1?'Salida nueva':nr+' salidas nuevas'} · Ver</button>`:''}</div>${ubadge(nw)}<svg class="i chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></div>`}).join('')
     :`<div class="empty" style="padding:14px">Aún no estás en ninguna grupeta.<br><small style="color:var(--txt2)">Crea la tuya o entra con el código que te pase un compañero.</small></div><button class="btn btn-line" style="margin-bottom:8px" onclick="openGroup()">🏷️ Ver las grupetas de la comunidad</button>`)
    +`<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px"><button class="btn btn-line" onclick="gpCreateMine()">➕ Crear grupeta</button><button class="btn btn-line" onclick="gpJoinCode()">🔑 Tengo un código</button></div>`
    +(g.notice?.text?`<small style="display:block;margin-top:8px;color:var(--lime);font-weight:700">📣 ${esc(g.notice.text)}</small>`:'');
@@ -4998,7 +5000,14 @@ function watchClubTalk(C,subs){
 /* VA 3.9 — Aviso de mensajes sin leer en los botones de chat (general y de cada grupeta) */
 function unreadClub(){const C=me?.group;if(!C)return 0;const seen=store.get('cmSeen_'+C,0);return (window.clubRecent||[]).filter(m=>m.uid!==uid&&(m.ts||0)>seen).length}
 function unreadGp(id){const seen=store.get('gpSeen_'+id,0);return (window.gpRecent||[]).filter(m=>m.gp===id&&m.uid!==uid&&(m.ts||0)>seen).length}
-function unreadAll(){return unreadClub()+myGps().reduce((n,id)=>n+unreadGp(id),0)}
+/* VA 3.9.1 — Salidas nuevas creadas por un compañero de tu grupeta (en rojo hasta que la abres) */
+function rideTs(r){const c=r&&r.createdAt;return c?(c.toMillis?c.toMillis():c.seconds?c.seconds*1000:+c||0):0}
+function rideNew(r){try{if(!r||!r.gp||r.byUid===uid||!myGps().includes(r.gp))return false;let b=store.get('gpRideBase',0);if(!b){b=Date.now();store.set('gpRideBase',b)}
+  const t=rideTs(r);return t>b&&!(store.get('rSeen',{})[r.id])}catch(e){return false}}
+function rideSeen(id){const m=store.get('rSeen',{});if(m[id])return;m[id]=Date.now();const k=Object.keys(m);if(k.length>200)k.sort((a,b)=>m[a]-m[b]).slice(0,k.length-200).forEach(x=>delete m[x]);store.set('rSeen',m);setTimeout(()=>{try{renderRides()}catch(e){}unreadPaint()},0)}
+function newRidesGp(id){try{return upcoming().filter(r=>r.gp===id&&rideNew(r)).length}catch(e){return 0}}
+function newRidesAll(){try{if(document.documentElement.classList.contains('rs-simple'))return 0;return upcoming().filter(rideNew).length}catch(e){return 0}}
+function unreadAll(){return unreadClub()+myGps().reduce((n,id)=>n+unreadGp(id),0)+newRidesAll()}
 const ubadge=n=>n?` <span class="ubadge" aria-label="${n} sin leer">${n>9?'9+':n}</span>`:'';
 function unreadPaint(){
   try{renderClubTalk()}catch(e){}try{renderVA()}catch(e){}try{renderGroup()}catch(e){}
