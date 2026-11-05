@@ -909,6 +909,20 @@ button,.btn,.li,.chip,.mini,.lvcatch,[onclick]{touch-action:manipulation;-webkit
 </style>
 </head>
 <body>
+<!-- VA 3.4.1 — MODO MEJORAS: pantalla de «estamos trabajando». Para quitarla: VA_MANT=false. Para probar la app igualmente: abrir con ?pruebas=1 (y ?pruebas=0 para volver) -->
+<div id="vaMant" role="alertdialog" aria-label="App en mejoras" style="position:fixed;inset:0;z-index:2147483647;background:linear-gradient(180deg,#0B3A78,#06162E);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;padding:28px 22px calc(28px + env(safe-area-inset-bottom));font-family:'Plus Jakarta Sans',system-ui,sans-serif;overflow:auto">
+ <img src="va-logo.png" alt="VillorvinAdventure" style="width:240px;max-width:70vw;height:auto">
+ <div style="font-size:12px;letter-spacing:3px;text-transform:uppercase;color:#D4D4D4;font-style:italic;margin-top:-6px">Passion led us here</div>
+ <div style="font-size:58px;line-height:1;margin-top:10px">🛠️</div>
+ <h1 style="font-size:26px;font-weight:800;margin:0">Estamos mejorando la app</h1>
+ <p style="font-size:16px;line-height:1.5;color:#C9D7EC;max-width:360px;margin:0">Estamos preparando una nueva versión de VillorvinAdventure, <b style="color:#fff">más fácil de usar</b>. Volvemos muy pronto. ¡Gracias por tu paciencia!</p>
+ <p style="font-size:14px;line-height:1.45;color:#9FB3D1;max-width:360px;margin:0;font-style:italic">Estem millorant l'app. Tornem aviat!</p>
+ <div style="display:grid;gap:10px;width:100%;max-width:340px;margin-top:10px">
+  <a href="tel:112" style="display:block;background:#EF4444;color:#fff;font-weight:800;font-size:18px;padding:16px;border-radius:16px;text-decoration:none">🚑 Emergencias: 112</a>
+  <a href="https://wa.me/34610200580?text=Hola%20VillorvinAdventure%2C%20tengo%20una%20consulta%3A%20" target="_blank" rel="noopener" style="display:block;background:#25D366;color:#fff;font-weight:800;font-size:16px;padding:14px;border-radius:16px;text-decoration:none">💬 Consultas por WhatsApp</a>
+ </div>
+</div>
+<script>(function(){var VA_MANT=true;try{var q=new URLSearchParams(location.search),k='velogo_vaPruebas';if(q.get('pruebas')==='1')localStorage.setItem(k,'1');if(q.get('pruebas')==='0')localStorage.removeItem(k);if(!VA_MANT||localStorage.getItem(k)==='1'){var e=document.getElementById('vaMant');if(e)e.remove()}}catch(e){}})();</script>
 <!-- VillorvinAdventure: vídeo de bienvenida (va-intro.mp4). Si no existe, sale el logo animado. Se salta tocando la pantalla. -->
 <div id="vaIntro" style="position:fixed;inset:0;z-index:99999;background:#06162E;display:flex;align-items:center;justify-content:center;flex-direction:column;transition:opacity .5s" onclick="vaIntroEnd()">
   <video id="vaIntroV" muted playsinline autoplay preload="auto" style="width:100%;height:100%;object-fit:cover;display:none" onended="vaIntroEnd()" onerror="vaIntroLogo()"><source src="va-intro.mp4" type="video/mp4" onerror="vaIntroLogo()"></video>
@@ -1168,7 +1182,7 @@ button,.btn,.li,.chip,.mini,.lvcatch,[onclick]{touch-action:manipulation;-webkit
     <button class="li" onclick="deleteAccount()"><span class="em">🗑️</span><div><b style="color:var(--red)">Borrar mi cuenta y mis datos</b><small>No se puede deshacer</small></div><svg class="i chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></button>
   </div>
   <div class="shopline" id="shopLine" style="display:none"></div>
-  <p style="color:var(--txt2);font-size:13px;text-align:center;margin-top:20px">VillorvinAdventure Pro · versión 3.4.0</p>
+  <p style="color:var(--txt2);font-size:13px;text-align:center;margin-top:20px">VillorvinAdventure Pro · versión 3.4.1</p>
 </section>
 
 <!-- ============ BARRA INFERIOR ============ -->
