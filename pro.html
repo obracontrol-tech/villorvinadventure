@@ -1062,6 +1062,7 @@ html:not(.rs-simple) .rs-sonly{display:none!important}
     <div id="myRides"></div>
   </div>
 
+  <button class="li" style="margin-top:12px;border-color:var(--lime)" onclick="openTracks()"><span class="em">🗺️</span><div><b>Rutas de la comunidad</b><small>Rutas que han hecho otros ciclistas: míralas, haz las que quieras y deja tu comentario</small></div><svg class="i chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></button>
   <!-- v5.15: Asistente VillorvinAdventure (beta) -->
   <a class="li" href="asistente.html" style="margin-top:12px;text-decoration:none;color:inherit;background:linear-gradient(135deg,rgba(77,163,255,.16),rgba(77,163,255,.04));border-color:var(--lime)"><span class="em">✨</span><div><b>Asistente VillorvinAdventure <span style="background:var(--lime);color:var(--on-lime);font-size:10px;font-weight:800;padding:2px 7px;border-radius:99px;vertical-align:2px;margin-left:4px">BETA</span></b><small>Pregunta por voz o escrito: dónde comer, fuentes, talleres, qué ropa ponerte, pinchazos…</small></div><svg class="i chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></a>
   <button class="li" style="margin-top:12px;border-color:var(--lime)" onclick="openNearby('rides')"><span class="em">🌍</span><div><b>Cerca de ti: salidas abiertas</b><small>Salidas públicas de ciclistas de tu zona: apúntate y rueda acompañado</small></div><svg class="i chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></button>
@@ -1122,7 +1123,7 @@ html:not(.rs-simple) .rs-sonly{display:none!important}
     <div id="chartBox"></div>
   </div>
   <div class="block">
-    <div class="sec"><h3>Historial</h3></div>
+    <div class="sec"><h3>Historial</h3><a onclick="openTracks(true)">🗺️ Mis tracks publicados <svg class="i" viewBox="0 0 24 24" style="width:18px"><path d="m9 6 6 6-6 6"/></svg></a></div>
     <div id="actList"></div>
   </div>
   <input type="file" id="fileIn" accept=".gpx,.tcx,application/gpx+xml,application/xml,text/xml" hidden>
@@ -1174,7 +1175,7 @@ html:not(.rs-simple) .rs-sonly{display:none!important}
     <button class="li" onclick="deleteAccount()"><span class="em">🗑️</span><div><b style="color:var(--red)">Borrar mi cuenta y mis datos</b><small>No se puede deshacer</small></div><svg class="i chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></button>
   </div>
   <div class="shopline" id="shopLine" style="display:none"></div>
-  <p style="color:var(--txt2);font-size:13px;text-align:center;margin-top:20px">VillorvinAdventure Pro · versión 3.7.0</p>
+  <p style="color:var(--txt2);font-size:13px;text-align:center;margin-top:20px">VillorvinAdventure Pro · versión 3.8.0</p>
 </section>
 
 <!-- ============ BARRA INFERIOR ============ -->
@@ -1313,7 +1314,7 @@ html:not(.rs-simple) .rs-sonly{display:none!important}
   </div>
 
   <div class="f">
-    <label class="check" style="margin-bottom:4px"><input type="checkbox" id="cOpen">🌍 Salida abierta: otros ciclistas de la zona pueden pedir unirse</label>
+    <label class="check" style="margin-bottom:4px"><input type="checkbox" id="cOpen">🌍 Ruta pública: otros ciclistas de la zona pueden pedir apuntarse</label>
     <small style="display:block;color:var(--txt2);margin-left:32px">Tú aceptas a cada uno. Solo se ve el punto de encuentro y la hora. Necesita el punto marcado en el mapa (📍).</small>
   </div>
 
@@ -3929,14 +3930,15 @@ async function r3vShare(){
 function r3vSave(){const a=document.createElement('a');a.href=R3V.url;a.download=r3vName();document.body.appendChild(a);a.click();a.remove();toast('💾 Vídeo guardado en Descargas')}
 function r3vClose(){$('r3vRes').classList.remove('show');$('r3vRes').innerHTML='';if(R3V.url){URL.revokeObjectURL(R3V.url);R3V.url=null}}
 let actMap=null;
-function openActDetail(id){
+function openActDetail(id,fin){
   const a=acts.find(x=>x.id===id);if(!a)return;
   const vm=a.mins>0?a.km/(a.mins/60):0;const prof=(a.pd||[]).map((d,i)=>({d,e:a.pe[i]}));
-  $('rideBody').innerHTML=sheetHead(esc(a.name))+`
-   <p style="color:var(--txt2);margin:-8px 0 12px">${fmtDate(a.date)}${a.group?' · 🛰️ en grupo':''}</p>
-   ${a.poly?'<div class="rmap" id="actMap"></div>':''}
+  $('rideBody').innerHTML=sheetHead(fin?'🏁 ¡Ruta terminada!':esc(a.name))+`
+   <p style="color:var(--txt2);margin:-8px 0 12px">${fin?esc(a.name)+' · ':''}${fmtDate(a.date)}${a.group?' · 🛰️ en grupo':''}</p>
+   ${a.poly?'<div class="rmap" id="actMap" style="height:300px"></div><small id="actPinTip" style="display:none;color:var(--txt2);margin:-4px 2px 8px">📷 Toca una foto del mapa para verla</small>':''}
    <div class="pstats" style="margin-top:0"><div><b class="num">${fmtNum(a.km,1)}</b><span>km</span></div><div><b class="num">${hm(a.mins||0)}</b><span>tiempo</span></div><div><b class="num">+${a.up||0}</b><span>m subida</span></div><div><b class="num">${vm?fmtNum(vm,1):'—'}</b><span>km/h media</span></div></div>
-   ${prof.length>1?profileSVG(prof):''}
+   ${prof.length>1?'<div style="margin-top:4px"><small style="color:var(--txt2);font-weight:700">⛰️ Desnivel del recorrido</small>'+profileSVG(prof)+'</div>':''}
+   ${tkBox(a)}
    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px">
     <button class="btn btn-lime" style="grid-column:1/-1" onclick="openPhoto(${a.id})">📸 Foto con tus datos</button>
     <button class="btn btn-line" id="actMedia" style="grid-column:1/-1;display:none" onclick="actMediaOpen(${a.id})"></button>
@@ -3951,7 +3953,10 @@ function openActDetail(id){
   if(a.poly&&typeof maplibregl!=='undefined'){
     const c=decodePoly(a.poly);
     actMap=newMap({container:'actMap',center:[c[0][1],c[0][0]],zoom:13,attributionControl:false});
-    setLine(actMap,c,'plan','#60A5FA');const b=new maplibregl.LngLatBounds();c.forEach(p=>b.extend([p[1],p[0]]));actMap.fitBounds(b,{padding:24,duration:0});setTimeout(()=>{if(actMap){actMap.resize();actMap.fitBounds(b,{padding:24,duration:0})}},350);
+    setLine(actMap,c,'plan','#60A5FA');const b=new maplibregl.LngLatBounds();c.forEach(p=>b.extend([p[1],p[0]]));actMap.fitBounds(b,{padding:30,duration:0});setTimeout(()=>{if(actMap){actMap.resize();actMap.fitBounds(b,{padding:30,duration:0})}},350);
+    try{const dot=(col,t)=>{const e=document.createElement('div');e.style.cssText=`width:18px;height:18px;border-radius:50%;background:${col};border:3px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4)`;e.title=t;return e};
+      new maplibregl.Marker({element:dot('#22C55E','Salida')}).setLngLat([c[0][1],c[0][0]]).addTo(actMap);
+      new maplibregl.Marker({element:dot('#EF4444','Llegada')}).setLngLat([c.at(-1)[1],c.at(-1)[0]]).addTo(actMap)}catch(e){}
   }
   actMediaShow(a);
 }
@@ -3968,6 +3973,115 @@ function deleteAct(id){
   closeSheets();renderActs();toast('Actividad borrada');
 }
 
+/* ===================================================================
+   VA 3.8 — RUTAS DE LA COMUNIDAD (estilo Wikiloc) · colección va_tracks (reglas v3.6)
+   Al acabar o subir una ruta, el ciclista decide si es pública o privada. Las públicas las ven
+   todos (Simple y Pro): pueden seguirla, marcar «la he hecho» y dejar comentarios.
+   =================================================================== */
+const TK={sub:null,list:[],mine:false,sport:'',cur:null,coms:[],comSub:null};
+const tkIco=x=>x.sport==='hike'?'🥾':'🚴';
+function tkBox(a){
+  if(!a||!a.poly)return '';
+  if(a.tk)return `<div class="li" style="cursor:default;border-color:var(--lime);margin-top:12px"><span class="em">🌍</span><div><b>Pública en Rutas de la comunidad</b><small>Otros ciclistas pueden verla, hacerla y comentarla</small></div><button class="mini" onclick="tkUnpublish(${a.id})">Hacer privada</button></div>`;
+  return `<div class="plc" style="margin-top:12px"><div class="pc-h"><span class="pc-tag">Comunidad</span><b>🗺️ ¿Compartes esta ruta?</b></div>
+    <small style="display:block;color:var(--txt2);margin:4px 0 10px">Si la haces <b>pública</b>, saldrá en «Rutas de la comunidad» para que otros ciclistas la hagan cuando quieran. Si la dejas <b>privada</b>, solo la ves tú.</small>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><button class="btn btn-lime" onclick="tkPublish(${a.id})">🌍 Pública</button><button class="btn btn-line" onclick="toast('🔒 Privada: solo la ves tú. Puedes publicarla cuando quieras desde Actividades')">🔒 Privada</button></div></div>`;
+}
+async function tkPublish(id){
+  const a=acts.find(x=>x.id===id);if(!a||!a.poly)return;
+  if(!db||!uid){toast('Conectando… inténtalo en unos segundos');return}
+  const nm=(prompt('Nombre de la ruta para la comunidad (ej. Vuelta al pantano de Utxesa)',a.name)||'').trim().slice(0,50);if(!nm)return;
+  try{const ref=db.collection('va_tracks').doc();
+    await ref.set({uid,by:myName(),name:nm,km:+(+a.km||0).toFixed(1),up:Math.round(+a.up||0),poly:String(a.poly).slice(0,15000),sport:a.sport==='hike'?'hike':'bike',
+      pd:(a.pd||[]).slice(0,130),pe:(a.pe||[]).slice(0,130),t:Date.now(),done:{[uid]:1},nc:0});
+    a.tk=ref.id;store.set('acts',acts);try{saveActRemote(a)}catch(e){}
+    toast('🌍 Publicada en Rutas de la comunidad',3500);openActDetail(id);
+  }catch(e){fbErr(e,'publicar la ruta')}
+}
+async function tkUnpublish(id){
+  const a=acts.find(x=>x.id===id);if(!a||!a.tk)return;
+  if(!await askConfirm('¿Hacerla privada?','Dejará de salir en «Rutas de la comunidad» y se borrarán sus comentarios del listado.','Hacer privada'))return;
+  try{await db.collection('va_tracks').doc(a.tk).delete()}catch(e){if(!(e&&e.code==='not-found')){fbErr(e,'quitar la ruta');return}}
+  delete a.tk;store.set('acts',acts);try{saveActRemote(a)}catch(e){}toast('🔒 Ahora es privada');openActDetail(id);
+}
+function openTracks(mine){
+  if(!db){toast('Sin conexión');return}
+  TK.mine=!!mine;openRideId=null;
+  $('rideBody').innerHTML=sheetHead(mine?'🗺️ Mis tracks publicados':'🗺️ Rutas de la comunidad')+`
+   <p style="color:var(--txt2);margin:-8px 0 10px">${mine?'Las rutas que has hecho públicas. Para publicar otra, ábrela en Actividades.':'Rutas que han hecho y compartido los ciclistas. Toca una para verla, seguirla y comentarla.'}</p>
+   ${mine?'':`<div class="chips" id="tkCh" style="margin:0 0 12px"><button class="chip${TK.sport===''?' on':''}" onclick="TK.sport='';tkRender()">Todas</button><button class="chip${TK.sport==='bike'?' on':''}" onclick="TK.sport='bike';tkRender()">🚴 Bici</button><button class="chip${TK.sport==='hike'?' on':''}" onclick="TK.sport='hike';tkRender()">🥾 A pie</button></div>`}
+   <div id="tkList"><div class="empty">Cargando…</div></div>
+   ${!mine&&myGroup?'<button class="lnk" style="margin-top:10px" onclick="openCommRoutes()">📌 Rutas planificadas que se han compartido en la comunidad</button>':''}`;
+  openSheet('sh-ride');
+  if(TK.sub)try{TK.sub()}catch(e){}
+  const q=mine?db.collection('va_tracks').where('uid','==',uid).limit(100):db.collection('va_tracks').orderBy('t','desc').limit(150);
+  TK.sub=q.onSnapshot(s=>{if(!$('tkList')){try{TK.sub()}catch(e){}TK.sub=null;return}
+    TK.list=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.t||0)-(a.t||0));tkRender()},
+    e=>{console.warn('rutas comunidad',e);const l=$('tkList');if(l)l.innerHTML='<div class="empty">No se pudieron cargar. Si acabas de actualizar, hay que publicar las reglas v3.6 en Firebase.</div>'});
+}
+function tkRender(){
+  const l=$('tkList');if(!l)return;
+  document.querySelectorAll('#tkCh .chip').forEach((c,i)=>c.classList.toggle('on',['','bike','hike'][i]===TK.sport));
+  const L=TK.list.filter(x=>!TK.sport||x.sport===TK.sport);
+  l.innerHTML=L.length?L.map(x=>{const n=Object.keys(x.done||{}).length;return `<div class="li" onclick="openTrack(${jsq(x.id)})" style="margin-bottom:10px;align-items:center"><div style="flex-shrink:0;width:96px;height:72px;border-radius:12px;background:var(--card2);overflow:hidden;display:grid;place-items:center">${routeSVG(x.poly,96,72)}</div><div style="min-width:0"><b>${tkIco(x)} ${esc(x.name)}</b><small>${fmtNum(+x.km||0,1)} km · +${+x.up||0} m · de ${esc(x.by||'Ciclista')}</small><small style="display:block;margin-top:2px">👣 ${n} ${n===1?'la ha hecho':'la han hecho'} · 💬 ${+x.nc||0}</small></div><svg class="i chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></div>`}).join('')
+    :`<div class="empty">${TK.mine?'Aún no has publicado ninguna ruta.<br><small style="color:var(--txt2)">Abre una salida en Actividades y pulsa «🌍 Pública».</small>':'Todavía no hay rutas compartidas.<br><small style="color:var(--txt2)">Sé el primero: al terminar una ruta, elige «🌍 Pública».</small>'}</div>`;
+}
+let tkMap=null;
+function openTrack(id){
+  const x=TK.list.find(t=>t.id===id);if(!x)return;TK.cur=x;
+  const n=Object.keys(x.done||{}).length,did=!!(x.done||{})[uid],own=x.uid===uid;
+  const prof=(x.pd||[]).map((d,i)=>({d,e:(x.pe||[])[i]||0}));
+  $('rideBody').innerHTML=sheetHead(tkIco(x)+' '+esc(x.name))+`
+   <p style="color:var(--txt2);margin:-8px 0 10px">Compartida por <b style="color:var(--txt)">${esc(x.by||'Ciclista')}</b> · ${fmtDate(iso(new Date(x.t||Date.now())))}</p>
+   <div class="rmap" id="tkMap" style="height:260px"></div>
+   <div class="pstats" style="margin-top:0"><div><b class="num">${fmtNum(+x.km||0,1)}</b><span>km</span></div><div><b class="num">+${+x.up||0}</b><span>m subida</span></div><div><b class="num">${n}</b><span>${n===1?'la ha hecho':'la han hecho'}</span></div></div>
+   ${prof.length>1?'<small style="color:var(--txt2);font-weight:700">⛰️ Desnivel</small>'+profileSVG(prof):''}
+   <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px">
+    <button class="btn btn-lime" style="grid-column:1/-1" onclick="tkFollow()">🧭 Seguir esta ruta</button>
+    <button class="btn ${did?'btn-lime':'btn-line'}" onclick="tkDone()">${did?'✅ La he hecho':'👣 La he hecho'}</button>
+    <button class="btn btn-line" onclick="downloadGPX(decodePoly(TK.cur.poly),TK.cur.name)">⬇️ GPX</button>
+    ${own||isAdmin?`<button class="btn btn-line" style="grid-column:1/-1;color:var(--red)" onclick="tkDelete()">🗑️ ${own?'Dejar de compartirla':'Borrar (administrador)'}</button>`:''}
+    <button class="btn btn-line" style="grid-column:1/-1" onclick="openTracks(TK.mine)">← Volver a la lista</button>
+   </div>
+   <div class="sec" style="margin-top:16px"><h3 style="font-size:17px">💬 Comentarios</h3></div>
+   <div id="tkComs"><div class="empty" style="padding:10px">Cargando…</div></div>
+   <div class="row2" style="margin-top:8px"><input class="inp" id="tkComIn" maxlength="300" placeholder="¿Qué tal la ruta? Estado del camino, fuentes…" enterkeyhint="send" onkeydown="if(event.key==='Enter')tkComSend()"><button class="mini lime" onclick="tkComSend()">Enviar</button></div>`;
+  openRideId=null;openSheet('sh-ride');
+  if(tkMap){try{tkMap.remove()}catch(e){}tkMap=null}
+  if(typeof maplibregl!=='undefined'){const c=decodePoly(x.poly);if(c.length>1){
+    tkMap=newMap({container:'tkMap',center:[c[0][1],c[0][0]],zoom:12,attributionControl:false});
+    setLine(tkMap,c,'plan','#60A5FA');const b=new maplibregl.LngLatBounds();c.forEach(p=>b.extend([p[1],p[0]]));
+    tkMap.fitBounds(b,{padding:30,duration:0});setTimeout(()=>{if(tkMap){tkMap.resize();tkMap.fitBounds(b,{padding:30,duration:0})}},350)}}
+  if(TK.comSub)try{TK.comSub()}catch(e){}
+  TK.comSub=db.collection('va_tracks').doc(id).collection('coms').orderBy('t','asc').limit(200).onSnapshot(s=>{
+    const box=$('tkComs');if(!box){try{TK.comSub()}catch(e){}TK.comSub=null;return}
+    const L=s.docs.map(d=>({id:d.id,...d.data()}));
+    box.innerHTML=L.length?L.map(m=>`<div class="msg${m.uid===uid?' me':''}" style="margin-bottom:6px">${m.uid===uid?'':`<span class="face" style="width:30px;height:30px;margin:0;flex-shrink:0;background:${colorOf(m.name)}">${ini(m.name)}</span>`}<div class="bub"><div class="mh"><b>${m.uid===uid?'Tú':esc(m.name)}</b><small>${msgTime(m.t)}</small>${m.uid===uid||own||isAdmin?`<button aria-label="Borrar comentario" onclick="tkComDel(${jsq(m.id)})">✕</button>`:''}</div><p>${esc(m.text)}</p></div></div>`).join('')
+      :'<div class="empty" style="padding:10px">Aún no hay comentarios. ¡Cuenta qué tal te fue!</div>';
+  },e=>{const box=$('tkComs');if(box)box.innerHTML='<div class="empty" style="padding:10px">No se pudieron cargar los comentarios.</div>'});
+}
+function tkFollow(){
+  const x=TK.cur;if(!x)return;const c=decodePoly(x.poly);if(c.length<2)return;
+  const r=unpackRoute({poly:x.poly,km:+x.km||0,up:+x.up||0,down:0,mins:estMins(+x.km||0,+x.up||0),mode:'track',pd:x.pd||[],pe:x.pe||[],
+    wps:[{lat:c[0][0],lng:c[0][1],label:'Salida'},{lat:c.at(-1)[0],lng:c.at(-1)[1],label:'Llegada'}]});
+  showRoute(r);setTimeout(()=>{try{$('planTitle').textContent=x.name}catch(e){}toast('🧭 Pulsa «▲ Iniciar» para seguirla',4000)},400);
+}
+async function tkDone(){
+  const x=TK.cur;if(!x||!db||!uid)return;const did=!!(x.done||{})[uid];
+  try{await db.collection('va_tracks').doc(x.id).update({['done.'+uid]:did?FV.delete():1});
+    x.done={...(x.done||{})};if(did)delete x.done[uid];else x.done[uid]=1;toast(did?'Quitado':'👣 ¡Apuntado! Ya cuentas como que la has hecho');openTrack(x.id)}catch(e){fbErr(e,'marcar la ruta')}
+}
+async function tkComSend(){
+  const x=TK.cur;const inp=$('tkComIn');if(!x||!inp||!ready())return;const text=inp.value.trim().slice(0,300);if(!text)return;inp.value='';
+  try{await db.collection('va_tracks').doc(x.id).collection('coms').add({uid,name:myName(),text,t:Date.now()});
+    db.collection('va_tracks').doc(x.id).update({nc:FV.increment(1)}).catch(()=>{});x.nc=(+x.nc||0)+1}catch(e){fbErr(e,'enviar el comentario')}
+}
+function tkComDel(cid){const x=TK.cur;if(!x)return;db.collection('va_tracks').doc(x.id).collection('coms').doc(cid).delete().catch(netErr)}
+async function tkDelete(){
+  const x=TK.cur;if(!x)return;
+  if(!await askConfirm('¿Dejar de compartirla?','La ruta dejará de salir en «Rutas de la comunidad». En tus Actividades sigue igual.','Quitar'))return;
+  try{await db.collection('va_tracks').doc(x.id).delete();acts.forEach(a=>{if(a.tk===x.id)delete a.tk});store.set('acts',acts);toast('Ruta quitada de la comunidad');openTracks(TK.mine)}catch(e){fbErr(e,'quitar la ruta')}
+}
 /* ---- Objetivo mensual y gráfica de 6 meses ---- */
 function setGoal(){
   const g=parseInt(prompt('¿Cuántos km quieres hacer al mes?',store.get('goal',200)),10);
@@ -5050,7 +5164,7 @@ function reqSet(rid,qid,st){db.collection('open').doc(rid).collection('reqs').do
 /* ===== Más funciones ===== */
 const FEATURES=[
   ['Rodar en grupo',[['📡','Ciclistas cerca','Quién de la comunidad rueda a menos de 2 km','fn:openNearby()'],['🔔','Probar aviso de pinchazo','Escucha la sirena del pelotón','fn:alarmTest()'],['🛰️','Pelotón en vivo','GPS en vivo de tu grupo','peloton']]],
-  ['Compartir y descubrir',[['🗺️','Rutas de la comunidad','Tracks que comparten los ciclistas para hacerlos cuando quieras','fn:openCommRoutes()'],['☕','Puntos ciclistas','Fuentes, cafés, talleres y más','fn:openPois()'],['🎖️','Logros','Tus medallas','fn:openBadges()']]],
+  ['Compartir y descubrir',[['🗺️','Rutas de la comunidad','Tracks que comparten los ciclistas para hacerlos cuando quieras','fn:openTracks()'],['☕','Puntos ciclistas','Fuentes, cafés, talleres y más','fn:openPois()'],['🎖️','Logros','Tus medallas','fn:openBadges()']]],
   ['Seguridad',[['🛡️','Seguridad','Contacto de emergencia, aviso de caída y 112','sos']]]
 ];
 $('features').innerHTML=FEATURES.map(([g,items])=>`<div class="grp-t">${g}</div>`+items.map(([e,t,s,p])=>`<button class="li" onclick="${p.startsWith('fn:')?p.slice(3):p==='sos'?'sos()':p==='peloton'?`toast('Se activa al pulsar «Empezar salida» el día de la salida')`:`toast('${t}: próximamente')`}"><span class="em">${e}</span><div><b>${t}</b><small>${s}</small></div><svg class="i chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></button>`).join('')).join('');
@@ -7074,7 +7188,8 @@ async function finishLive(save){
   if(L.km<0.2||L.pts.length<3){toast('Salida demasiado corta: no se ha guardado');return}
   const coords=L.pts.map(p=>[p[0],p[1],p[2]||0]);
   const r={coords,km:L.km,up:L.up,down:0,mins,mode:'track',legs:[]};
-  try{await addElevation(r)}catch(e){r.up=L.up}
+  try{await addElevation(r)}catch(e){r.up=L.up;   // VA 3.8: sin internet, el desnivel sale de la altitud del GPS
+    try{if(coords.some(p=>p[2])){const cd=cumDist(coords);r.prof=coords.map((p,i)=>({d:cd[i],e:p[2]||0}))}}catch(_){}}
   const pk=packRoute(r);
   const title=L.rideId?(L.rideTitle||'Salida en grupo'):(L.hike?'Ruta a pie':'Salida en bici');
   const a={id:Date.now(),name:title,date:iso(new Date(L.startT)),km:+L.km.toFixed(1),up:Math.round(r.up||L.up),mins,group:!!L.rideId,gp:(rides.find(x=>x.id===L.rideId)||{}).gp||'',...(rideOrg(rides.find(x=>x.id===L.rideId))?{va:1}:{}),mk:L.mk||null,...(L.hike?{sport:'hike'}:{}),...pk};
@@ -7084,7 +7199,7 @@ async function finishLive(save){
   publishAct(a);checkBadges();if(!L.hike)addKmToBike(L.km);
   renderActs();go('actividades');
   toast(`✅ Guardada: ${a.km} km · +${gain} puntos`);
-  setTimeout(()=>openPhoto(a.id,true),700);
+  setTimeout(()=>openActDetail(a.id,true),600);   // VA 3.8: primero el resumen (mapa, fotos y desnivel)
 }
 
 /* ===================================================================
@@ -7248,7 +7363,7 @@ async function actMediaShow(a){
   if(!a||!a.mk)return;let l=[];try{l=await mList(a.mk)}catch(e){}
   const b=$('actMedia');if(!l.length||!b)return;
   b.style.display='';b.textContent=`📷 Fotos y vídeos de la salida (${l.length})`;
-  if(actMap)l.forEach(m=>mPin(m,actMap));
+  if(actMap){l.forEach(m=>mPin(m,actMap));if(l.some(m=>m.lat!=null)&&$('actPinTip'))$('actPinTip').style.display='block'}
 }
 function actMediaOpen(id){const a=acts.find(x=>x.id===id);if(a&&a.mk)mgOpen(a.mk,'Fotos y vídeos')}
 /* En «Foto con tus datos»: usar una foto hecha durante la salida */
@@ -7486,7 +7601,7 @@ $('fileIn').onchange=async e=>{
     if(op[k][2]==='route'){importRouteGpx(pts,km,up,name);return}
     acts.unshift(a);store.set('acts',acts);saveActRemote(a);addRank(a);
     const gain=Math.min(300,Math.round(km))+10;addPoints(gain);
-    renderActs();publishAct(a);checkBadges();addKmToBike(km);toast(`Actividad guardada · +${gain} puntos`);
+    renderActs();publishAct(a);checkBadges();addKmToBike(km);toast(`Actividad guardada · +${gain} puntos`);setTimeout(()=>openActDetail(a.id),500);
   }catch(_){toast('No pudimos leer este archivo. Comprueba que sea GPX o TCX.');if(forC)reopenCreate()}
 };
 function renderActs(){
