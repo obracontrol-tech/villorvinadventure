@@ -15,6 +15,8 @@
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-messaging-compat.js"></script>
+<meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Familia VA"><link rel="apple-touch-icon" href="va-icon-192.png">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%;background:#06162E;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:#fff;-webkit-text-size-adjust:100%}
@@ -46,6 +48,7 @@ html,body{height:100%;background:#06162E;font-family:system-ui,-apple-system,"Se
 .alrt h2{font-size:23px;line-height:1.2}.alrt p{font-size:14.5px;margin-top:6px;opacity:.95}
 .alrt .ab{display:grid;gap:8px;margin-top:12px}.alrt .ab a,.alrt .ab button{min-height:52px;border-radius:16px;border:0;font-weight:900;font-size:17px;display:flex;align-items:center;justify-content:center;text-decoration:none;font-family:inherit}
 .a112{background:#fff;color:#B91C1C}.a2{background:rgba(255,255,255,.18);color:#fff;border:2px solid rgba(255,255,255,.5)!important}
+.pst{margin-top:8px;font-size:12.5px;line-height:1.4;color:#C9D3E0;background:rgba(77,163,255,.12);border:1px solid rgba(77,163,255,.35);border-radius:12px;padding:8px 10px;display:none}.pst.ok{background:rgba(34,197,94,.13);border-color:rgba(34,197,94,.45)}.pst b{color:#fff}
 .snd{margin-top:8px;width:100%;min-height:42px;border-radius:21px;border:1px dashed rgba(255,255,255,.35);background:transparent;color:#C9D3E0;font-weight:700;font-family:inherit;font-size:13.5px}
 .foot{font-size:11px;color:#8FA0B5;text-align:center;margin-top:10px}
 .foot a{color:#4DA3FF}
@@ -56,7 +59,8 @@ html,body{height:100%;background:#06162E;font-family:system-ui,-apple-system,"Se
   <div class="who"><div class="av" id="av">?</div><div><h1 id="nm">…</h1><p id="sub"></p></div></div>
   <span class="st ok" id="st">…</span>
   <div class="btns"><a class="b1" id="gm" href="#" target="_blank" rel="noopener">🧭 Cómo llegar</a><button class="b2" onclick="center()">📍 Centrar</button></div>
-  <button class="snd" id="snd" onclick="sndOn()">🔔 Activar alarma sonora (por si hay una caída)</button>
+  <button class="snd" id="snd" onclick="sndOn()">🔔 Activar alarma (por si hay una caída)</button>
+  <div class="pst" id="pst"></div>
   <div class="foot">Se actualiza solo. Puedes dejar esta página abierta. · <a href="https://www.villorvinadventure.com/inicio" target="_blank" rel="noopener">VillorvinAdventure</a></div>
 </div>
 <div class="alrt" id="alrt" role="alert" aria-live="assertive"></div>
@@ -101,8 +105,33 @@ else{
   let AC=null,seen=null,ring=null;const T0=document.title;
   window.sndOn=()=>{try{AC=AC||new (window.AudioContext||window.webkitAudioContext)();AC.resume();beep(1)}catch(e){}
     try{localStorage.setItem('vaSnd','1')}catch(e){}
-    $('snd').textContent='🔔 Alarma sonora activada';$('snd').disabled=true;
-    if('Notification' in window&&Notification.permission==='default')Notification.requestPermission().catch(()=>{})};
+    $('snd').textContent='🔔 Alarma activada';$('snd').disabled=true;
+    keepAwake();famPush(true)};
+  /* VA 3.10 — Aviso de caída aunque el móvil esté bloqueado o estés en otra página (notificación del sistema) */
+  const VAPID='BKmhkL2WgapvlMofF-BxUWypCkiIGKwqpE0FNzdwOcRBBiGlDKxxHS4uZj0eCNcXn8331jp8Z4FOsXPZS_q0MVM';
+  const isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+  const isApp=window.matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
+  function pst(h,ok){const e=$('pst');e.innerHTML=h;e.className='pst'+(ok?' ok':'');e.style.display='block'}
+  async function famPush(ask){
+    try{
+      if(isIOS&&!isApp){pst('📱 <b>En iPhone</b>, para que te avise con el móvil bloqueado: toca <b>Compartir</b> <span style="font-size:15px">⬆️</span> → <b>«Añadir a pantalla de inicio»</b>. Ábrela desde el icono nuevo y pulsa otra vez «Activar alarma».<br>Mientras tanto, deja esta página abierta y la pantalla encendida.');return}
+      if(!('Notification' in window)||!('serviceWorker' in navigator)||!('PushManager' in window)||!firebase.messaging||!(await firebase.messaging.isSupported())){pst('⚠️ Este navegador no permite avisos con el móvil bloqueado. Deja esta página abierta: la pantalla no se apagará y sonará la alarma.');return}
+      let p=Notification.permission;
+      if(p==='default'&&ask)p=await Notification.requestPermission();
+      if(p==='denied'){pst('🔕 Has bloqueado las notificaciones de esta página. Para recibir el aviso con el móvil bloqueado, actívalas en los ajustes del navegador (candado junto a la dirección → Notificaciones → Permitir).');return}
+      if(p!=='granted')return;
+      const reg=await navigator.serviceWorker.register('sw.js');await navigator.serviceWorker.ready;
+      const tok=await firebase.messaging().getToken({vapidKey:VAPID,serviceWorkerRegistration:reg});
+      const u=firebase.auth().currentUser;if(!tok||!u)throw new Error('sin token');
+      await firebase.firestore().collection('share').doc(id).collection('fam').doc(u.uid).set({tokens:{[tok]:true},t:Date.now()});
+      pst('✅ <b>Listo.</b> Si hay una posible caída te llegará un aviso aunque tengas el móvil bloqueado o estés en otra app. Puedes cerrar esta página.',true);
+    }catch(e){console.warn('famPush',e);pst('⚠️ No se pudo activar el aviso con el móvil bloqueado. Deja esta página abierta: la pantalla no se apagará y sonará la alarma.')}
+  }
+  // Pantalla siempre encendida mientras la página esté abierta (para que siga sonando la alarma)
+  let wl=null;async function keepAwake(){try{if('wakeLock' in navigator&&document.visibilityState==='visible'&&!wl){wl=await navigator.wakeLock.request('screen');wl.addEventListener('release',()=>{wl=null})}}catch(e){}}
+  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){try{if(localStorage.getItem('vaSnd')==='1')keepAwake()}catch(e){}}});
+  if(isIOS){try{const m={name:'Familia VillorvinAdventure',short_name:'Familia VA',start_url:location.href,scope:new URL('./',location.href).href,display:'standalone',background_color:'#06162E',theme_color:'#06162E',icons:[{src:new URL('va-icon-192.png',location.href).href,sizes:'192x192',type:'image/png'}]};
+    const l=document.createElement('link');l.rel='manifest';l.href='data:application/manifest+json,'+encodeURIComponent(JSON.stringify(m));document.head.appendChild(l)}catch(e){}}
   function beep(n){if(!AC)return;let t=AC.currentTime+.02;for(let k=0;k<(n||6);k++){[1400,950].forEach(fq=>{const o=AC.createOscillator(),g=AC.createGain();o.type='sawtooth';o.frequency.value=fq;g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.6,t+.01);g.gain.setValueAtTime(.6,t+.2);g.gain.linearRampToValueAtTime(0,t+.22);o.connect(g);g.connect(AC.destination);o.start(t);o.stop(t+.23);t+=.24})}}
   function stopRing(){clearInterval(ring);ring=null;document.title=T0;try{navigator.vibrate&&navigator.vibrate(0)}catch(e){}}
   window.silence=()=>{stopRing();const b=$('alrt').querySelector('.sil');if(b)b.remove()};
@@ -124,12 +153,13 @@ else{
       if(seen!==key){seen=key;setTimeout(()=>{if(box.className==='alrt ok')box.className='alrt'},60000)}
     }
   }
-  try{if(localStorage.getItem('vaSnd')==='1'){const u=()=>{window.sndOn();document.removeEventListener('pointerdown',u)};document.addEventListener('pointerdown',u)}}catch(e){}
+  try{if(localStorage.getItem('vaSnd')==='1'){const u=()=>{window.sndOn();document.removeEventListener('pointerdown',u)};document.addEventListener('pointerdown',u);keepAwake()}}catch(e){}
   let cur=null;setInterval(()=>{paint(cur);if(cur)showAlert(cur)},20000);
   Promise.resolve(firebase.auth().signInAnonymously()).then(()=>{
     firebase.firestore().collection('share').doc(id).onSnapshot(s=>{
       if(!s.exists){fail('Este enlace ya no está activo','Puede que tu familiar haya dejado de compartir su ubicación.');return}
       cur=s.data();paint(cur);showAlert(cur);
+      if(!window.__fp){window.__fp=1;try{if(localStorage.getItem('vaSnd')==='1'&&'Notification' in window&&Notification.permission==='granted')famPush(false)}catch(e){}}
     },e=>fail('No se pudo cargar','Revisa tu conexión a internet y vuelve a abrir el enlace.'));
   }).catch(()=>fail('No se pudo conectar','Revisa tu conexión a internet y vuelve a abrir el enlace.'));
 }

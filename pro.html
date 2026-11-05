@@ -1177,7 +1177,7 @@ html:not(.rs-simple) .rs-sonly{display:none!important}
     <button class="li" onclick="deleteAccount()"><span class="em">🗑️</span><div><b style="color:var(--red)">Borrar mi cuenta y mis datos</b><small>No se puede deshacer</small></div><svg class="i chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></button>
   </div>
   <div class="shopline" id="shopLine" style="display:none"></div>
-  <p style="color:var(--txt2);font-size:13px;text-align:center;margin-top:20px">VillorvinAdventure Pro · versión 3.9.1</p>
+  <p style="color:var(--txt2);font-size:13px;text-align:center;margin-top:20px">VillorvinAdventure Pro · versión 3.10.0</p>
 </section>
 
 <!-- ============ BARRA INFERIOR ============ -->
@@ -5304,7 +5304,14 @@ function famAlert(type,test){
   const p=live.on&&live.pts&&live.pts.at(-1);
   const a={type,t:Date.now(),...(test?{test:true}:{}),...(p?{lat:+p[0].toFixed(6),lng:+p[1].toFixed(6)}:{})};
   const d={alert:a,t:Date.now(),...(p?{lat:a.lat,lng:a.lng}:{})};
-  return db.collection('share').doc(fam.id).set(d,{merge:true}).then(()=>true).catch(e=>{console.warn('famAlert',e);toast('⚠️ No se pudo avisar a la familia');return false});
+  return db.collection('share').doc(fam.id).set(d,{merge:true}).then(()=>{famPushSend(fam.id);return true}).catch(e=>{console.warn('famAlert',e);toast('⚠️ No se pudo avisar a la familia');return false});
+}
+/* VA 3.10 — El aviso de caída llega también como notificación al móvil de la familia (aunque esté bloqueado) */
+async function famPushSend(share){
+  try{const u=firebase.auth().currentUser;if(!u)return;let from=0;
+    for(let i=0;i<6;i++){const r=await (await fetch(VA_PUSH_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({idToken:await u.getIdToken(),t:'fam',share,from})})).json();
+      console.log('VA push familia',r);if(!r||!r.next)break;from=r.next}
+  }catch(e){console.warn('VA push familia',e)}
 }
 function fallOk(){clearInterval(fd.cd);clearInterval(fd.rep);alarmStop();try{speechSynthesis.cancel()}catch(e){}try{ttsAudio&&ttsAudio.pause()}catch(e){}
   $('fallBox').classList.remove('show');const was=fd.state;fd.state='idle';

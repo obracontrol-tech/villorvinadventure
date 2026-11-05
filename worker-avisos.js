@@ -1,4 +1,4 @@
-// VillorvinAdventure — Worker de avisos con la app cerrada (Cloudflare) · v3.6
+// VillorvinAdventure — Worker de avisos con la app cerrada (Cloudflare) · v3.10
 // Nombre del Worker: villorvinadventure-push  →  https://villorvinadventure-push.pedrosaborrego.workers.dev
 // Secretos (Settings → Variables and Secrets), los mismos de siempre:
 //   FIREBASE_SA  = el contenido COMPLETO del archivo JSON de la cuenta de servicio de Firebase
@@ -14,6 +14,7 @@
 //   chg    → cambio de día, hora o lugar a los apuntados
 //   can    → salida cancelada a los apuntados
 //   alert  → avisos en ruta (pinchazo, esperad, ayuda, caída, perdido…) a los apuntados
+//   fam    → v3.10: posible caída (y «está bien») a la familia que mira la ubicación en directo, aunque tenga el móvil bloqueado
 //   test   → prueba: el ciclista se manda un aviso a sí mismo a los 10 segundos (1 por minuto)
 //   org    → desde la consola (solo cuentas de la organización): novedad, próximo viaje, publicidad,
 //            aviso general y respuesta a una consulta. La publicidad solo llega a quien la acepta en Perfil.
@@ -55,7 +56,7 @@ export default {
     const out = (o, s = 200) => new Response(JSON.stringify(o), { status: s, headers: { ...cors, 'Content-Type': 'application/json' } });
     if (req.method === 'OPTIONS') return new Response(null, { headers: cors });
     if (req.method === 'GET' && new URL(req.url).searchParams.has('diag')) return out(await diag(env));
-    if (req.method !== 'POST') return out({ ok: true, info: 'villorvinadventure-push v3.6 activo' });
+    if (req.method !== 'POST') return out({ ok: true, info: 'villorvinadventure-push v3.10 activo' });
     const C = ctx(env);
     try {
       const b = await req.json();
@@ -67,6 +68,7 @@ export default {
       const t = b.t || 'sos';
       if (t === 'sos') return out(await sos(C, uid, b));
       if (t === 'test') return out(await selfTest(C, uid, ctxCf));
+      if (t === 'fam') return out(await famEvent(C, uid, String(b.share || ''), Math.max(0, Math.min(5000, parseInt(b.from, 10) || 0))));
       if (t === 'org') return out(await orgEvent(C, user, b, Math.max(0, Math.min(20000, parseInt(b.from, 10) || 0))));
       if (!/^[A-Za-z0-9]{20}$/.test(b.ride || '')) return out({ error: 'datos' }, 400);
       const from = Math.max(0, Math.min(5000, parseInt(b.from, 10) || 0));
@@ -387,9 +389,36 @@ async function sendAll(C, tokens, from, msg, keep = 1) {
   // Borra los móviles que ya no existen (app desinstalada), si quedan conexiones
   for (const d of dead) {
     if (C.left() <= keep) break;
-    await C.patch(`users/${d.u}/private/push`, {}, ['tokens.`' + d.t.replace(/[`\\]/g, '\\$&') + '`']).catch(() => {});
+    await C.patch(d.p || `users/${d.u}/private/push`, {}, ['tokens.`' + d.t.replace(/[`\\]/g, '\\$&') + '`']).catch(() => {});
   }
   return { sent, next: i < tokens.length ? i : 0, okUids: [...okUids] };
+}
+
+/* ---------------- v3.10: aviso de caída a la familia (página de ubicación en directo) ---------------- */
+async function famEvent(C, uid, share, from) {
+  if (!/^[a-z0-9]{6,20}$/.test(share)) throw fail('datos', 400);
+  const d = await C.get(`share/${share}`);
+  if (!d) throw fail('enlace', 404);
+  if (sv(d.uid) !== uid) throw fail('autor', 403);
+  const a = mv(d.alert), type = sv(a.type), at = num(a.t);
+  if (!['fall', 'ok'].includes(type)) throw fail('tipo', 400);
+  if (Date.now() - at > 10 * 60 * 1000) throw fail('antiguo', 400);
+  const st = mv(mv(d.px).fam);
+  if (from === 0) { if (num(st.t) === at) return { ok: true, repetido: true }; }
+  else if (num(st.t) !== at || from !== num(st.n)) throw fail('tanda', 400);
+  const r = await C.f(`${FS}/share/${share}/fam?pageSize=60`, { headers: await C.auth() });
+  const L = r.ok ? ((await r.json()).documents || []) : [];
+  const tokens = [];
+  for (const x of L) { const fu = x.name.split('/').pop(); for (const t of keys((x.fields || {}).tokens)) tokens.push({ u: fu, t, p: `share/${share}/fam/${fu}` }); }
+  tokens.sort((x, y) => (x.u + x.t).localeCompare(y.u + y.t));
+  const name = sv(d.name) || 'Tu familiar', test = !!(a.test && a.test.booleanValue);
+  const msg = type === 'fall'
+    ? { title: (test ? 'PRUEBA · ' : '') + 'POSIBLE CAÍDA de ' + name, body: test ? 'Es una prueba: así te llegará el aviso si hay una caída.' : 'No ha respondido. Toca para ver dónde está y llamar.', urgent: '1' }
+    : { title: (test ? 'PRUEBA · ' : '') + name + ' está bien', body: test ? 'Prueba terminada.' : 'Ha confirmado que está bien.', urgent: '0' };
+  const res = tokens.length ? await sendAll(C, tokens, from, { ...msg, url: `./familia.html?v=${share}`, tag: 'va-fam-' + share }) : { sent: 0, next: 0 };
+  await C.patch(`share/${share}`, { px: { mapValue: { fields: { fam: { mapValue: { fields: {
+    t: { integerValue: String(at) }, n: { integerValue: String(res.next) } } } } } } } }, ['px.fam']);
+  return { ok: true, enviados: res.sent, total: tokens.length, next: res.next };
 }
 
 /* ---------------- Recibos: el móvil confirma que le ha llegado ---------------- */
