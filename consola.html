@@ -99,7 +99,7 @@ tr:last-child td{border-bottom:none}
     </div>
     <nav class="tabs" id="tabs" aria-label="Apartados de la consola"></nav>
     <main id="view"></main>
-    <p class="foot">Asistencia VillorvinAdventure · 610 200 580 · <a href="https://www.villorvinadventure.com/inicio" target="_blank" rel="noopener">villorvinadventure.com</a> · Consola versión 3.8.2</p>
+    <p class="foot">Asistencia VillorvinAdventure · 610 200 580 · <a href="https://www.villorvinadventure.com/inicio" target="_blank" rel="noopener">villorvinadventure.com</a> · Consola versión 3.9.0</p>
   </div>
 </div>
 <div id="toast" role="status" aria-live="polite"></div>
@@ -183,7 +183,7 @@ async function loadClub(myUid){
    solo dejan escribir al propietario). Aquí solo se muestra el aviso o el bloqueo al cliente */
 const LIC_WA='34643223301';
 const LIC_DEF={aviso:'Hay una factura pendiente de pago. Para evitar la suspensión del servicio, contacta con JM Prestige AI Solutions.',suspendido:'El servicio está suspendido temporalmente por un pago pendiente. Contacta con JM Prestige AI Solutions para reactivarlo.'};
-const TABS=[['ciclistas','👥 Ciclistas'],['grupetas','🏷️ Grupetas'],['rutas','🗺️ Próximas rutas'],['consultas','❓ Consultas'],['novedades','🆕 Novedades, viajes y avisos'],['copias','💾 Copias']];
+const TABS=[['ciclistas','👥 Ciclistas'],['grupetas','🏷️ Grupetas'],['rutas','🗺️ Próximas rutas'],['consultas','❓ Consultas'],['novedades','🆕 Novedades, viajes y avisos'],['legal','📄 Condiciones'],['copias','💾 Copias']];
 function go(t){S.tab=t;S.editRuta=null;render();window.scrollTo(0,0)}
 function render(){
   if($('app').style.display!=='block')return;
@@ -192,7 +192,7 @@ function render(){
   // Suspendido: la consola del cliente se bloquea (el propietario la sigue viendo)
   if(est==='suspendido'&&!S.owner){$('tabs').innerHTML='';$('view').innerHTML=licBlock();return}
   $('tabs').innerHTML=TABS.map(([k,t])=>`<button class="tab${S.tab===k?' on':''}" onclick="go('${k}')">${t}${k==='consultas'&&pend?`<span class="dot">${pend}</span>`:''}</button>`).join('');
-  const f={ciclistas:vCiclistas,grupetas:vGrupetas,rutas:vRutas,consultas:vConsultas,novedades:vNovedades,copias:vCopias}[S.tab];
+  const f={ciclistas:vCiclistas,grupetas:vGrupetas,rutas:vRutas,consultas:vConsultas,novedades:vNovedades,legal:vLegal,copias:vCopias}[S.tab];
   const keep=document.activeElement&&document.activeElement.id&&$('view').contains(document.activeElement)?document.activeElement.id:null;
   if(keep&&(S.tab==='rutas'&&S.editRuta||['rq','nT','nX','nL','nG','nK','nP','aX','aP','gpNew','rf','rPush'].includes(keep)||/^rep_/.test(keep)))return;   // no borrar lo que estás escribiendo
   $('view').innerHTML=licBanner()+f();
@@ -455,6 +455,42 @@ async function newsSave(){const ti=($('nT').value||'').trim().slice(0,80),tx=($(
 async function newsDel(id){if(!confirm('¿Borrar esta novedad?'))return;try{await db.collection('va_news').doc(id).delete();toast('Novedad borrada')}catch(e){fail(e)}}
 
 /* ---------- 💾 Copias y restaurar ---------- */
+/* ---------- 📄 Condiciones de uso y privacidad: copia del documento y registro de aceptaciones ---------- */
+const LEGAL_V='2026-11';
+const fmtS=t=>t?new Date(t).toLocaleString('es-ES',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit'}):'—';
+function legalOf(m){   // la aceptación más reciente entre los registros del mismo ciclista
+  let v=m.legalV||'',t=+m.legalT||0;
+  (S.all||[]).forEach(x=>{if((x.id===m.id||(telNorm(x.tel)&&telNorm(x.tel)===telNorm(m.tel)))&&(+x.legalT||0)>t){t=+x.legalT;v=x.legalV||''}});
+  return{v,t}}
+function vLegal(){
+  const L=S.members.map(m=>({...m,lg:legalOf(m)})).sort((a,b)=>(b.lg.t||0)-(a.lg.t||0));
+  const ok=L.filter(x=>x.lg.v===LEGAL_V),old=L.filter(x=>x.lg.v&&x.lg.v!==LEGAL_V),pend=L.filter(x=>!x.lg.v);
+  return `<div class="stats">
+    <div class="stat"><b>${ok.length}</b><span>Han aceptado la versión ${LEGAL_V}</span></div>
+    <div class="stat"><b>${old.length}</b><span>Aceptaron una versión anterior</span></div>
+    <div class="stat"><b>${pend.length}</b><span>Pendientes de aceptar</span></div></div>
+  <div class="grid2"><div class="box"><h2>📄 Documento vigente · versión ${LEGAL_V}</h2>
+    <p class="hint">Condiciones de uso, seguridad y responsabilidad, y política de privacidad que aceptan los ciclistas al registrarse (y los que ya usaban la app, al abrirla). La copia archivada de cada versión no cambia nunca.</p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
+     <a class="btn pri" href="legal-${LEGAL_V}.html" target="_blank" rel="noopener">📖 Ver documento</a>
+     <a class="btn" href="legal-${LEGAL_V}.html?print=1" target="_blank" rel="noopener">🖨️ Guardar copia en PDF</a>
+     <button class="btn" onclick="legalDownload()">⬇️ Descargar copia</button></div>
+    <p class="hint" style="margin-top:10px">Para el PDF: en la ventana de imprimir elige «Guardar como PDF».</p></div>
+   <div class="box"><h2>🧾 Registro de aceptaciones</h2>
+    <p class="hint">Cada ciclista acepta marcando 3 casillas: condiciones y privacidad; que la app es una ayuda y en una emergencia llama al 112; y que es mayor de edad o tiene autorización. Se guarda la versión y la fecha y hora exactas.</p>
+    <button class="btn pri" style="margin-top:12px" onclick="legalCsv()">⬇️ Exportar registro (Excel / CSV)</button></div></div>
+  <div class="tbl" style="margin-top:12px"><table><thead><tr><th>Ciclista</th><th>Móvil</th><th>App</th><th>Versión aceptada</th><th>Fecha y hora de aceptación</th></tr></thead><tbody>${L.map(x=>`<tr><td>${esc(x.name||'—')}</td><td>${esc(x.tel||'—')}</td><td>${x.app==='pro'?'Pro':'Simple'}</td><td>${x.lg.v?(x.lg.v===LEGAL_V?'✅ '+esc(x.lg.v):'🟡 '+esc(x.lg.v)):'<span style="color:var(--red);font-weight:800">⏳ Pendiente</span>'}</td><td>${x.lg.t?fmtS(x.lg.t):'—'}</td></tr>`).join('')||'<tr><td colspan="5" class="hint">Aún no hay ciclistas registrados</td></tr>'}</tbody></table></div>
+  <p class="hint" style="margin-top:8px">Los que aparecen como «Pendiente» verán la ventana para aceptar la próxima vez que abran la app.</p>`;
+}
+async function legalDownload(){
+  try{const r=await fetch('legal-'+LEGAL_V+'.html',{cache:'no-store'});const t=await r.text();download('VillorvinAdventure_condiciones_'+LEGAL_V+'.html',t,'text/html')}catch(e){alert('No se pudo descargar. Revisa la conexión.')}
+}
+function legalCsv(){
+  const q=s=>'"'+String(s==null?'':s).replace(/"/g,'""')+'"';
+  const rows=[['Ciclista','Móvil','App','Versión aceptada','Fecha y hora de aceptación','ID de usuario']];
+  S.members.forEach(m=>{const lg=legalOf(m);rows.push([m.name||'',m.tel||'',m.app==='pro'?'Pro':'Simple',lg.v||'PENDIENTE',lg.t?fmtS(lg.t):'',m.id])});
+  download('VillorvinAdventure_aceptaciones_'+new Date().toISOString().slice(0,10)+'.csv','\ufeff'+rows.map(r=>r.map(q).join(';')).join('\r\n'),'text/csv;charset=utf-8');
+}
 function vCopias(){
   return `<div class="grid2"><div class="box"><h2>💾 Hacer una copia</h2><p class="hint">Descarga en un archivo todo lo de la consola: ciclistas, rutas y fichas, novedades, aviso, consultas y las grupetas de la comunidad. Guárdalo en el PC o en tu Drive.</p>
     <p class="hint" style="margin-top:8px">${S.members.length} ciclistas · ${S.rutas.length} rutas · ${S.news.length} novedades · ${S.support.length} consultas · ${gpList().length} grupetas</p>

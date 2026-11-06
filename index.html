@@ -1263,7 +1263,7 @@ html:not(.rs-simple) .rs-sonly{display:none!important}
   </div>
   <button class="li rs-pro" style="margin-top:14px" onclick="openPro()"><span class="em">⭐</span><div><b>Solicita la Pro de VillorvinAdventure</b><small>Para miembros. Misma cuenta, mismos datos.</small></div></button>
   <div class="shopline" id="shopLine" style="display:none"></div>
-  <p style="color:var(--txt2);font-size:13px;text-align:center;margin-top:20px">VillorvinAdventure Simple · versión 3.18.0</p>
+  <p style="color:var(--txt2);font-size:13px;text-align:center;margin-top:20px">VillorvinAdventure Simple · versión 3.19.0</p>
 </section>
 
 <!-- ============ BARRA INFERIOR ============ -->
@@ -8012,7 +8012,8 @@ function legalSave(){
 }
 /* Para quien ya usa la app: una vez, al abrirla (no se puede seguir sin aceptar) */
 function legalGate(){
-  if(legalOk()||!me||!me.name)return;
+  if(legalOk()){if(!window.__lgs&&db&&uid){window.__lgs=1;db.collection('va_members').doc(uid).set({legalV:store.get('legalV',''),legalT:store.get('legalT',0)},{merge:true}).catch(()=>{})}return}   // VA 3.19: la consola siempre tiene el registro
+  if(!me||!me.name)return;
   if($('onb')&&$('onb').classList.contains('show'))return;
   if($('legalGate'))return;
   const d=document.createElement('div');d.id='legalGate';
@@ -8239,6 +8240,7 @@ function vaReg(){
   const c=emerC();const key=uid+'|'+me.name+'|'+t+'|'+app+'|'+c.tel+'|'+c.name;if(store.get('vaRegd','')===key)return;
   db.collection('va_members').doc(uid).set({name:String(me.name).slice(0,40),tel:String(t).slice(0,20),t:Date.now(),app})
     .then(()=>c.tel?db.collection('va_members').doc(uid).set({eTel:c.tel,eName:c.name},{merge:true}).catch(e=>console.warn('VA contacto',e)):null)
+    .then(()=>{const lv=store.get('legalV',''),lt=store.get('legalT',0);return lv?db.collection('va_members').doc(uid).set({legalV:lv,legalT:lt},{merge:true}).catch(e=>console.warn('VA legal',e)):null})   // VA 3.19: la ficha no borra la aceptación de condiciones
     .then(()=>store.set('vaRegd',key)).catch(e=>console.warn('VA ficha',e));
 }
 let vaAsked=false;
