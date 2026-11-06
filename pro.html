@@ -70,6 +70,13 @@ svg.i{width:24px;height:24px;stroke:currentColor;fill:none;stroke-width:2;stroke
 :root:not([data-theme="light"]) #s-actividades .stats .stat,:root:not([data-theme="light"]) #s-comunidad .li{background:rgba(12,36,70,.62);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px)}
 [data-theme="light"] #s-actividades .acbg{opacity:.22}
 [data-theme="light"] #s-actividades .sec h3{text-shadow:none}
+/* 3.13.0: grupo de MTB en el desierto de fondo en Perfil, arriba, con transparencia */
+#s-perfil{isolation:isolate}
+#s-perfil .pfbg{position:absolute;left:0;right:0;top:0;height:660px;z-index:-1;pointer-events:none;background:linear-gradient(rgba(6,22,46,.15),rgba(6,22,46,.15)),url(va-perfil-desierto.jpg) center top/cover no-repeat;opacity:.9;-webkit-mask-image:linear-gradient(180deg,#000 55%,transparent 100%);mask-image:linear-gradient(180deg,#000 55%,transparent 100%)}
+:root:not([data-theme="light"]) #s-perfil .li,:root:not([data-theme="light"]) #s-perfil .inp,:root:not([data-theme="light"]) #s-perfil .mini{background:rgba(12,36,70,.62);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px)}
+:root:not([data-theme="light"]) #s-perfil .prof h2,:root:not([data-theme="light"]) #s-perfil .prof p,:root:not([data-theme="light"]) #s-perfil .l,:root:not([data-theme="light"]) #s-perfil .f small,:root:not([data-theme="light"]) #s-perfil .sec h3{text-shadow:0 1px 6px rgba(0,0,0,.85)}
+:root:not([data-theme="light"]) #s-perfil .f small{color:#D5E0F0!important}
+[data-theme="light"] #s-perfil .pfbg{opacity:.22}
 
 #s-rutas{padding:0}
 
@@ -1151,6 +1158,7 @@ html:not(.rs-simple) .rs-sonly{display:none!important}
 
 <!-- ============ PERFIL ============ -->
 <section class="screen" id="s-perfil">
+  <div class="pfbg" aria-hidden="true"></div>
   <div class="prof">
     <div class="avatar" data-ini>V</div>
     <h2 id="pfName">Ciclista</h2>
@@ -1195,7 +1203,7 @@ html:not(.rs-simple) .rs-sonly{display:none!important}
     <button class="li" onclick="deleteAccount()"><span class="em">🗑️</span><div><b style="color:var(--red)">Borrar mi cuenta y mis datos</b><small>No se puede deshacer</small></div><svg class="i chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></button>
   </div>
   <div class="shopline" id="shopLine" style="display:none"></div>
-  <p style="color:var(--txt2);font-size:13px;text-align:center;margin-top:20px">VillorvinAdventure Pro · versión 3.12.0</p>
+  <p style="color:var(--txt2);font-size:13px;text-align:center;margin-top:20px">VillorvinAdventure Pro · versión 3.13.0</p>
 </section>
 
 <!-- ============ BARRA INFERIOR ============ -->

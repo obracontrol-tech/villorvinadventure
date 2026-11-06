@@ -1,5 +1,5 @@
 // VillorvinAdventure — Service Worker (v1.0)
-const CACHE = 'va-v3-12-0';                 // la app (se renueva con cada versión)
+const CACHE = 'va-v3-13-0';                 // la app (se renueva con cada versión)
 const MAPS = 'va-offline-map';           // zonas guardadas por el ciclista (no se borran al actualizar)
 const VIEW = 'va-map-view';              // mapa ya visto (se recorta solo)
 const LIBS = 'va-libs';                  // librerías externas (mapa, Firebase, letras)
