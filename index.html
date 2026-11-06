@@ -493,7 +493,7 @@ textarea.inp{padding:14px 16px;min-height:80px;resize:vertical}
 .dots i{width:10px;height:10px;border-radius:5px;background:var(--line);transition:.2s}
 .dots i.on{width:28px;background:var(--lime)}
 #onb input{margin-top:6px;text-align:center;max-width:320px}
-#onb .slide{overflow-y:auto}
+#onb .slide{overflow-y:auto;justify-content:safe center}   /* VA 3.18: con las casillas legales todo se puede ver bajando */
 .safef{display:flex;flex-direction:column;gap:8px;width:100%;max-width:340px;margin:0 auto}
 .safef small{color:var(--txt2);font-size:13px;line-height:1.4;text-align:left}
 .safef .lnk{background:none;border:0;color:var(--txt2);text-decoration:underline;font-size:15px;padding:8px;font-family:inherit}
@@ -1258,12 +1258,12 @@ html:not(.rs-simple) .rs-sonly{display:none!important}
     <button class="li" onclick="openNews()"><span class="em">🆕</span><div><b>Novedades y próximas actualizaciones</b><small id="newsSub">Lo último de VillorvinAdventure</small></div><svg class="i chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></button>
     <button class="li" onclick="openEthics()"><span class="em">📜</span><div><b>Código ético del ciclista</b><small>Las normas de convivencia de VillorvinAdventure</small></div><svg class="i chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></button>
     <button class="li" onclick="openInvite()"><span class="em">📣</span><div><b>Invitar a amigos</b><small>Código QR, WhatsApp y cartel para la comunidad</small></div><svg class="i chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></button>
-    <a class="li" style="text-decoration:none;color:inherit" href="https://www.villorvinadventure.com/pol%C3%ADtica-y-condiciones" target="_blank" rel="noopener"><span class="em">📄</span><div><b>Privacidad y condiciones</b><small>Qué datos guardamos y por qué</small></div><svg class="i chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></a>
+    <a class="li" style="text-decoration:none;color:inherit" href="legal.html" target="_blank" rel="noopener"><span class="em">📄</span><div><b>Condiciones de uso y privacidad</b><small>Qué datos guardamos, por qué y tus responsabilidades</small></div><svg class="i chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></a>
     <button class="li" onclick="deleteAccount()"><span class="em">🗑️</span><div><b style="color:var(--red)">Borrar mi cuenta y mis datos</b><small>No se puede deshacer</small></div><svg class="i chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></button>
   </div>
   <button class="li rs-pro" style="margin-top:14px" onclick="openPro()"><span class="em">⭐</span><div><b>Solicita la Pro de VillorvinAdventure</b><small>Para miembros. Misma cuenta, mismos datos.</small></div></button>
   <div class="shopline" id="shopLine" style="display:none"></div>
-  <p style="color:var(--txt2);font-size:13px;text-align:center;margin-top:20px">VillorvinAdventure Simple · versión 3.17.0</p>
+  <p style="color:var(--txt2);font-size:13px;text-align:center;margin-top:20px">VillorvinAdventure Simple · versión 3.18.0</p>
 </section>
 
 <!-- ============ BARRA INFERIOR ============ -->
@@ -7940,7 +7940,7 @@ function showOnb(){if($('onb').classList.contains('show'))return;onbI=0;paintOnb
 function paintOnb(){
   const [e,t,p]=ONB[onbI];
   const ec=emerC();
-  $('onbSlide').innerHTML=`<div class="big">${e}</div><h2>${t}</h2><p>${p}</p>${onbI===2?`<input class="inp" id="onbName" placeholder="A. Nombre y apellido (no el correo)" maxlength="24" autocomplete="name" value="${esc(me&&me.name||'')}"><input class="inp" id="onbTel" type="tel" inputmode="tel" placeholder="B. Tu teléfono (ej. 600 123 456)" maxlength="20" autocomplete="tel" style="margin-top:8px" value="${esc(store.get('vaTel',''))}"><input class="inp" id="onbETel" type="tel" inputmode="tel" placeholder="C. Teléfono de emergencia" maxlength="20" autocomplete="off" style="margin-top:8px" value="${esc(ec.tel)}"><input class="inp" id="onbERel" placeholder="D. Parentesco y/o nombre (ej. Mujer · Ana)" maxlength="40" autocomplete="off" style="margin-top:8px" value="${esc(ec.name)}"><small style="color:var(--txt2);max-width:320px;margin-top:6px">El teléfono de emergencia es de un familiar o amigo: le avisamos si tienes un accidente.</small><small style="color:var(--txt2);max-width:320px">Al empezar aceptas la <a href="https://www.villorvinadventure.com/pol%C3%ADtica-y-condiciones" target="_blank" rel="noopener" style="color:var(--lime)">privacidad y condiciones</a> de VillorvinAdventure.</small>`:''}${onbI===3?`<div class="safef"><small>${FD_APP_TXT}</small><button class="btn btn-line" type="button" onclick="fallAsk(true)">🧪 Ver cómo es el aviso de caída</button></div>`:''}`;
+  $('onbSlide').innerHTML=`<div class="big">${e}</div><h2>${t}</h2><p>${p}</p>${onbI===2?`<input class="inp" id="onbName" placeholder="A. Nombre y apellido (no el correo)" maxlength="24" autocomplete="name" value="${esc(me&&me.name||'')}"><input class="inp" id="onbTel" type="tel" inputmode="tel" placeholder="B. Tu teléfono (ej. 600 123 456)" maxlength="20" autocomplete="tel" style="margin-top:8px" value="${esc(store.get('vaTel',''))}"><input class="inp" id="onbETel" type="tel" inputmode="tel" placeholder="C. Teléfono de emergencia" maxlength="20" autocomplete="off" style="margin-top:8px" value="${esc(ec.tel)}"><input class="inp" id="onbERel" placeholder="D. Parentesco y/o nombre (ej. Mujer · Ana)" maxlength="40" autocomplete="off" style="margin-top:8px" value="${esc(ec.name)}"><small style="color:var(--txt2);max-width:320px;margin-top:6px">El teléfono de emergencia es de un familiar o amigo: le avisamos si tienes un accidente.</small>${legalChecksHTML('onb')}`:''}${onbI===3?`<div class="safef"><small>${FD_APP_TXT}</small><button class="btn btn-line" type="button" onclick="fallAsk(true)">🧪 Ver cómo es el aviso de caída</button></div>`:''}`;
   $('onbDots').innerHTML=ONB.map((_,i)=>`<i class="${i===onbI?'on':''}"></i>`).join('');
   $('onbNext').textContent=onbI===3?'¡Empezar!':onbI===2?'💾 Guardar y continuar':'Siguiente';
 }
@@ -7982,14 +7982,50 @@ $('onbNext').onclick=()=>{
   const et=($('onbETel').value||'').trim().slice(0,20);if(telNorm(et).length<9){toast('Escribe el teléfono de emergencia');return}
   const er=($('onbERel').value||'').trim().slice(0,40);if(!er){toast('Escribe el parentesco y/o nombre de tu contacto');return}
   if(telNorm(et)===telNorm(vt)){toast('El teléfono de emergencia tiene que ser de otra persona');return}
+  if(!legalChecked('onb'))return;   // VA 3.18
   if(!db||!uid){toast('Conectando… inténtalo en unos segundos');return}
   store.set('vaTel',vt);store.set('vaRegd','');store.set('emerC',{name:er,tel:et});store.set('safeOnb',1);
   me={name:n,pts:0,created:0};store.set('me',me);window.__sn=1;
   db.collection('users').doc(uid).set({name:n,pts:0,created:0,since:FV.serverTimestamp()},{merge:true}).catch(netErr);
-  paintName();vaReg();
+  paintName();vaReg();legalSave();
   onbI=3;paintOnb();
 };
 
+/* ===== VA 3.18 — Condiciones de uso y privacidad: aceptación obligatoria (registro y usuarios actuales) ===== */
+const LEGAL_V='2026-11';
+const legalOk=()=>store.get('legalV','')===LEGAL_V;
+function legalChecksHTML(k){return `<div class="legalc" style="text-align:left;max-width:340px;margin:10px auto 0;display:flex;flex-direction:column;gap:8px">
+  <label style="display:flex;gap:10px;align-items:flex-start;font-size:14px;line-height:1.4"><input type="checkbox" id="${k}L1" style="width:22px;height:22px;flex-shrink:0;margin-top:1px;accent-color:var(--lime)"><span>He leído y acepto las <a href="legal.html#condiciones" target="_blank" rel="noopener" style="color:var(--lime);font-weight:700">Condiciones de uso</a> y la <a href="legal.html#privacidad" target="_blank" rel="noopener" style="color:var(--lime);font-weight:700">Política de privacidad</a>.</span></label>
+  <label style="display:flex;gap:10px;align-items:flex-start;font-size:14px;line-height:1.4"><input type="checkbox" id="${k}L2" style="width:22px;height:22px;flex-shrink:0;margin-top:1px;accent-color:var(--lime)"><span>Entiendo que la app es una <b>ayuda</b>: salgo bajo mi responsabilidad, cumplo las normas de circulación y, en una emergencia, llamo al <b>112</b>. <a href="legal.html#seguridad" target="_blank" rel="noopener" style="color:var(--lime)">Leer más</a></span></label>
+  <label style="display:flex;gap:10px;align-items:flex-start;font-size:14px;line-height:1.4"><input type="checkbox" id="${k}L3" style="width:22px;height:22px;flex-shrink:0;margin-top:1px;accent-color:var(--lime)"><span>Soy mayor de edad, o tengo la autorización de mi padre, madre o tutor.</span></label>
+ </div>`}
+function legalChecked(k){const a=[1,2,3].map(i=>$(k+'L'+i)&&$(k+'L'+i).checked);
+  if(!a[0]){toast('Para seguir, acepta las Condiciones de uso y la Política de privacidad');return false}
+  if(!a[1]){toast('Marca que entiendes que la app es una ayuda y no sustituye al 112');return false}
+  if(!a[2]){toast('Marca que eres mayor de edad o tienes autorización');return false}
+  return true}
+function legalSave(){
+  const t=Date.now();store.set('legalV',LEGAL_V);store.set('legalT',t);
+  // Se guarda aparte (merge), para que nunca bloquee el resto de datos
+  if(db&&uid){db.collection('users').doc(uid).set({legal:{v:LEGAL_V,t,app:(typeof RS_SIMPLE!=='undefined'&&RS_SIMPLE)?'simple':'pro'}},{merge:true}).catch(e=>console.warn('legal',e));
+    db.collection('va_members').doc(uid).set({legalV:LEGAL_V,legalT:t},{merge:true}).catch(e=>console.warn('legal VA',e))}
+}
+/* Para quien ya usa la app: una vez, al abrirla (no se puede seguir sin aceptar) */
+function legalGate(){
+  if(legalOk()||!me||!me.name)return;
+  if($('onb')&&$('onb').classList.contains('show'))return;
+  if($('legalGate'))return;
+  const d=document.createElement('div');d.id='legalGate';
+  d.style.cssText='position:fixed;inset:0;z-index:99998;background:rgba(2,10,22,.92);display:grid;place-items:center;padding:16px;overflow:auto';
+  d.innerHTML=`<div style="background:var(--card);border:1px solid var(--line);border-radius:22px;padding:20px;width:100%;max-width:420px;text-align:center;color:var(--txt)">
+   <div style="font-size:42px">📄</div><h2 style="margin:6px 0 6px;font-size:21px">Condiciones de uso y privacidad</h2>
+   <p style="color:var(--txt2);font-size:14.5px">Hemos actualizado las condiciones de VillorvinAdventure. Para seguir usando la app, léelas y acéptalas. Solo te lo pedimos una vez.</p>
+   <a class="btn btn-line" style="margin-top:12px;text-decoration:none" href="legal.html" target="_blank" rel="noopener">📖 Leer las condiciones</a>
+   ${legalChecksHTML('lg')}
+   <button class="btn btn-lime" style="margin-top:14px;width:100%;min-height:54px" id="lgOk">✅ Acepto y continúo</button></div>`;
+  document.body.appendChild(d);
+  $('lgOk').onclick=()=>{if(!legalChecked('lg'))return;legalSave();d.remove();toast('✅ Gracias. ¡Buena ruta!')};
+}
 /* ===== Firebase: conexión y datos en tiempo real ===== */
 function startFirebase(){
   if(typeof firebase==='undefined'){toast('Sin conexión. Abre VillorvinAdventure con internet');ridesLoaded=true;renderRides();if(!me)showOnb();return}
@@ -8006,7 +8042,7 @@ function startFirebase(){
     uid=u.uid;
     // Perfil
     db.collection('users').doc(uid).onSnapshot(s=>{
-      if(s.exists&&s.data().name){me={...me,...s.data()};store.set('me',me);if(!(onbI===3&&$('onb').classList.contains('show')))$('onb').classList.remove('show');if(!window.__sn)setTimeout(safetyNudge,5000)}
+      if(s.exists&&s.data().name){me={...me,...s.data()};store.set('me',me);if(!(onbI===3&&$('onb').classList.contains('show')))$('onb').classList.remove('show');if(!window.__sn)setTimeout(safetyNudge,5000);setTimeout(legalGate,2500)}   // VA 3.18: aceptar condiciones
       else if(window.__deleting)return;
       else if(me&&me.name){db.collection('users').doc(uid).set({name:me.name,pts:me.pts||0,created:me.created||0,since:FV.serverTimestamp()},{merge:true}).catch(()=>{})}
       else showOnb();
