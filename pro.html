@@ -504,6 +504,17 @@ textarea.inp{padding:14px 16px;min-height:80px;resize:vertical}
 .dots i.on{width:28px;background:var(--lime)}
 #onb input{margin-top:6px;text-align:center;max-width:320px}
 #onb .slide{overflow-y:auto;justify-content:safe center}   /* VA 3.18: con las casillas legales todo se puede ver bajando */
+/* VA 3.20.1: pantalla «Tus datos» más compacta para que la casilla de condiciones quepa sin bajar */
+#onb:has(#onbTel){padding-top:18px}
+#onb:has(#onbTel) .logo{margin-top:0;font-size:28px}
+#onb .slide:has(#onbTel){gap:6px}
+#onb .slide:has(#onbTel) .big{font-size:44px;line-height:1}
+#onb .slide:has(#onbTel) h2{font-size:24px}
+#onb .slide:has(#onbTel) p{font-size:15px}
+#onb .slide:has(#onbTel) .inp{min-height:44px}
+#onb .slide:has(#onbTel) small{font-size:12px!important;margin-top:2px!important}
+#onb .slide:has(#onbTel) .legalc{margin-top:6px!important;font-size:13px!important}
+#onb:has(#onbTel) .dots{margin-bottom:12px}
 .safef{display:flex;flex-direction:column;gap:8px;width:100%;max-width:340px;margin:0 auto}
 .safef small{color:var(--txt2);font-size:13px;line-height:1.4;text-align:left}
 .safef .lnk{background:none;border:0;color:var(--txt2);text-decoration:underline;font-size:15px;padding:8px;font-family:inherit}
@@ -1234,7 +1245,7 @@ html:not(.rs-simple) .rs-sonly{display:none!important}
     <button class="li" onclick="deleteAccount()"><span class="em">🗑️</span><div><b style="color:var(--red)">Borrar mi cuenta y mis datos</b><small>No se puede deshacer</small></div><svg class="i chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></button>
   </div>
   <div class="shopline" id="shopLine" style="display:none"></div>
-  <p style="color:var(--txt2);font-size:13px;text-align:center;margin-top:20px">VillorvinAdventure Pro · versión 3.20.0</p>
+  <p style="color:var(--txt2);font-size:13px;text-align:center;margin-top:20px">VillorvinAdventure Pro · versión 3.20.1</p>
 </section>
 
 <!-- ============ BARRA INFERIOR ============ -->
