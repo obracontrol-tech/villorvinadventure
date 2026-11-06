@@ -477,7 +477,7 @@ function vLegal(){
      <button class="btn" onclick="legalDownload()">⬇️ Descargar copia</button></div>
     <p class="hint" style="margin-top:10px">Para el PDF: en la ventana de imprimir elige «Guardar como PDF».</p></div>
    <div class="box"><h2>🧾 Registro de aceptaciones</h2>
-    <p class="hint">Cada ciclista acepta marcando 3 casillas: condiciones y privacidad; que la app es una ayuda y en una emergencia llama al 112; y que es mayor de edad o tiene autorización. Se guarda la versión y la fecha y hora exactas.</p>
+    <p class="hint">Cada ciclista acepta marcando una casilla: condiciones y privacidad, que la app es una ayuda (en una emergencia llama al 112) y que es mayor de edad o tiene autorización. Se guarda la versión y la fecha y hora exactas.</p>
     <button class="btn pri" style="margin-top:12px" onclick="legalCsv()">⬇️ Exportar registro (Excel / CSV)</button></div></div>
   <div class="tbl" style="margin-top:12px"><table><thead><tr><th>Ciclista</th><th>Móvil</th><th>App</th><th>Versión aceptada</th><th>Fecha y hora de aceptación</th></tr></thead><tbody>${L.map(x=>`<tr><td>${esc(x.name||'—')}</td><td>${esc(x.tel||'—')}</td><td>${x.app==='pro'?'Pro':'Simple'}</td><td>${x.lg.v?(x.lg.v===LEGAL_V?'✅ '+esc(x.lg.v):'🟡 '+esc(x.lg.v)):'<span style="color:var(--red);font-weight:800">⏳ Pendiente</span>'}</td><td>${x.lg.t?fmtS(x.lg.t):'—'}</td></tr>`).join('')||'<tr><td colspan="5" class="hint">Aún no hay ciclistas registrados</td></tr>'}</tbody></table></div>
   <p class="hint" style="margin-top:8px">Los que aparecen como «Pendiente» verán la ventana para aceptar la próxima vez que abran la app.</p>`;

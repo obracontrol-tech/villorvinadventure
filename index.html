@@ -1263,7 +1263,7 @@ html:not(.rs-simple) .rs-sonly{display:none!important}
   </div>
   <button class="li rs-pro" style="margin-top:14px" onclick="openPro()"><span class="em">⭐</span><div><b>Solicita la Pro de VillorvinAdventure</b><small>Para miembros. Misma cuenta, mismos datos.</small></div></button>
   <div class="shopline" id="shopLine" style="display:none"></div>
-  <p style="color:var(--txt2);font-size:13px;text-align:center;margin-top:20px">VillorvinAdventure Simple · versión 3.19.0</p>
+  <p style="color:var(--txt2);font-size:13px;text-align:center;margin-top:20px">VillorvinAdventure Simple · versión 3.20.0</p>
 </section>
 
 <!-- ============ BARRA INFERIOR ============ -->
@@ -7994,16 +7994,8 @@ $('onbNext').onclick=()=>{
 /* ===== VA 3.18 — Condiciones de uso y privacidad: aceptación obligatoria (registro y usuarios actuales) ===== */
 const LEGAL_V='2026-11';
 const legalOk=()=>store.get('legalV','')===LEGAL_V;
-function legalChecksHTML(k){return `<div class="legalc" style="text-align:left;max-width:340px;margin:10px auto 0;display:flex;flex-direction:column;gap:8px">
-  <label style="display:flex;gap:10px;align-items:flex-start;font-size:14px;line-height:1.4"><input type="checkbox" id="${k}L1" style="width:22px;height:22px;flex-shrink:0;margin-top:1px;accent-color:var(--lime)"><span>He leído y acepto las <a href="legal.html#condiciones" target="_blank" rel="noopener" style="color:var(--lime);font-weight:700">Condiciones de uso</a> y la <a href="legal.html#privacidad" target="_blank" rel="noopener" style="color:var(--lime);font-weight:700">Política de privacidad</a>.</span></label>
-  <label style="display:flex;gap:10px;align-items:flex-start;font-size:14px;line-height:1.4"><input type="checkbox" id="${k}L2" style="width:22px;height:22px;flex-shrink:0;margin-top:1px;accent-color:var(--lime)"><span>Entiendo que la app es una <b>ayuda</b>: salgo bajo mi responsabilidad, cumplo las normas de circulación y, en una emergencia, llamo al <b>112</b>. <a href="legal.html#seguridad" target="_blank" rel="noopener" style="color:var(--lime)">Leer más</a></span></label>
-  <label style="display:flex;gap:10px;align-items:flex-start;font-size:14px;line-height:1.4"><input type="checkbox" id="${k}L3" style="width:22px;height:22px;flex-shrink:0;margin-top:1px;accent-color:var(--lime)"><span>Soy mayor de edad, o tengo la autorización de mi padre, madre o tutor.</span></label>
- </div>`}
-function legalChecked(k){const a=[1,2,3].map(i=>$(k+'L'+i)&&$(k+'L'+i).checked);
-  if(!a[0]){toast('Para seguir, acepta las Condiciones de uso y la Política de privacidad');return false}
-  if(!a[1]){toast('Marca que entiendes que la app es una ayuda y no sustituye al 112');return false}
-  if(!a[2]){toast('Marca que eres mayor de edad o tienes autorización');return false}
-  return true}
+function legalChecksHTML(k){return `<label class="legalc" style="display:flex;gap:10px;align-items:flex-start;text-align:left;max-width:340px;margin:12px auto 0;font-size:14px;line-height:1.45"><input type="checkbox" id="${k}L1" style="width:24px;height:24px;flex-shrink:0;margin-top:1px;accent-color:var(--lime)"><span>Acepto las <a href="legal.html#condiciones" target="_blank" rel="noopener" style="color:var(--lime);font-weight:700">Condiciones de uso</a> y la <a href="legal.html#privacidad" target="_blank" rel="noopener" style="color:var(--lime);font-weight:700">Privacidad</a>. Entiendo que la app es una <b>ayuda</b> (salgo bajo mi responsabilidad y en una emergencia llamo al <b>112</b>) y soy mayor de edad o tengo autorización.</span></label>`}
+function legalChecked(k){if(!($(k+'L1')&&$(k+'L1').checked)){toast('Para seguir, marca la casilla de las condiciones');return false}return true}
 function legalSave(){
   const t=Date.now();store.set('legalV',LEGAL_V);store.set('legalT',t);
   // Se guarda aparte (merge), para que nunca bloquee el resto de datos
