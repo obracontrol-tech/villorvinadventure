@@ -1146,6 +1146,8 @@ html:not(.rs-simple) .rs-sonly{display:none!important}
     <div id="goalBox" style="margin-top:10px"></div>
   </div>
   <div class="block">
+    <div class="sec"><h3>🏆 Rankings</h3><a onclick="rankActFull()">Ver completo <svg class="i" viewBox="0 0 24 24" style="width:18px"><path d="m9 6 6 6-6 6"/></svg></a></div>
+    <div id="rankAct"></div>
     <div class="sec"><h3>Últimos 6 meses</h3><span style="color:var(--txt2);font-size:13px">km</span></div>
     <div id="chartBox"></div>
   </div>
@@ -1203,7 +1205,7 @@ html:not(.rs-simple) .rs-sonly{display:none!important}
     <button class="li" onclick="deleteAccount()"><span class="em">🗑️</span><div><b style="color:var(--red)">Borrar mi cuenta y mis datos</b><small>No se puede deshacer</small></div><svg class="i chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></button>
   </div>
   <div class="shopline" id="shopLine" style="display:none"></div>
-  <p style="color:var(--txt2);font-size:13px;text-align:center;margin-top:20px">VillorvinAdventure Pro · versión 3.15.0</p>
+  <p style="color:var(--txt2);font-size:13px;text-align:center;margin-top:20px">VillorvinAdventure Pro · versión 3.16.0</p>
 </section>
 
 <!-- ============ BARRA INFERIOR ============ -->
@@ -2559,9 +2561,67 @@ function watchRanks(){
   renderRank();
 }
 function rankList(g){const d=rankDocs[g];if(!d||!d.s)return[];return Object.entries(d.s).map(([k,v])=>({id:k,name:v.n||myGroup?.members?.[k]||'Ciclista',km:+v.km||0,rides:+v.rides||0,up:+v.up||0})).filter(u=>u.km>0).sort((a,b)=>b.km-a.km)}
+/* ===== VA 3.16 — Ranking por tipo de actividad (km y desnivel), de toda la comunidad y de cada grupeta =====
+   Cada salida guarda su tipo (a.tp). En el ranking, cada ciclista tiene s[uid].t[tipo] = {km, up, n}.
+   El total de la comunidad suma TODAS las salidas de los miembros. */
+const ACT_TP={road:['🚴','Carretera'],mtb:['🚵','MTB'],gravel:['🪨','Gravel'],hike:['🥾','A pie']};
+const ACT_TP_K=['road','mtb','gravel','hike'];
+async function pickActType(a){
+  if(a.sport==='hike'){a.tp='hike';return}
+  const gm=a.gp&&myGroup&&myGroup.grupetas&&myGroup.grupetas[a.gp]?myGroup.grupetas[a.gp].mod:'';
+  const fromGp={Carretera:'road',MTB:'mtb',Gravel:'gravel'}[gm];
+  if(fromGp){a.tp=fromGp;return}
+  const last=store.get('lastTp','road');const order=[last,...ACT_TP_K.filter(k=>k!==last)];
+  const i=await askChoice('🏆 ¿Qué tipo de salida ha sido? (cuenta para su ranking)',order.map(k=>[ACT_TP[k][0]+' '+ACT_TP[k][1],'',k]));
+  a.tp=i<0?last:order[i];if(a.tp==='hike')a.sport='hike';store.set('lastTp',a.tp);
+}
+function rankTypeWrite(a,sign){
+  const C=me?.group;if(!db||!uid||!C||!myGroup||!(+a.km>0)||!ACT_TP[a.tp])return;
+  const gs=['all',...(a.gp&&(myGroup.grupetas||{})[a.gp]?[a.gp]:[])];
+  gs.forEach(g=>db.collection('rank').doc(C+'_'+g).set({club:C,gp:g==='all'?'':g,period:'temporada',s:{[uid]:{n:myName(),t:{[a.tp]:{km:FV.increment(sign*+(+a.km).toFixed(1)),up:FV.increment(sign*Math.round(+a.up||0)),n:FV.increment(sign)}}}}},{merge:true}).catch(e=>console.warn('ranking tipo',e)));
+}
+async function changeActType(id){
+  const a=acts.find(x=>x.id===id);if(!a)return;
+  const order=ACT_TP_K;const i=await askChoice('🏷️ Tipo de salida',order.map(k=>[ACT_TP[k][0]+' '+ACT_TP[k][1]+(a.tp===k?' ✓':''),'',k]));
+  if(i<0||order[i]===a.tp)return;
+  if(a.tp&&a.rkT)rankTypeWrite(a,-1);
+  a.tp=order[i];a.sport=a.tp==='hike'?'hike':(a.sport==='hike'?undefined:a.sport);if(!a.sport)delete a.sport;
+  rankTypeWrite(a,1);a.rkT=1;store.set('acts',acts);saveActRemote(a);renderActs();openActDetail(id);
+  toast('🏷️ Tipo cambiado: '+ACT_TP[a.tp][1]);
+}
+let RK={g:'all',tp:'all',m:'km'};
+function rankListT(g,tp,m){
+  const d=rankDocs[g];if(!d||!d.s)return[];
+  return Object.entries(d.s).map(([k,v])=>{const t=tp==='all'?{km:+v.km||0,up:+v.up||0,n:+v.rides||0}:((v.t||{})[tp]||{});
+    return{id:k,name:v.n||myGroup?.members?.[k]||'Ciclista',km:+t.km||0,up:+t.up||0,rides:+t.n||0}})
+   .filter(u=>u[m]>0).sort((a,b)=>b[m]-a[m]||b.km-a.km);
+}
+function rankRowsT(l,m,max){
+  return l.slice(0,max||50).map((u,i)=>`<div class="rrow${u.id===uid?' me':''}"><div class="pos p${i+1}">${i+1}</div><div class="face" style="background:${colorOf(u.name)}">${ini(u.name)}</div><div class="nm">${esc(u.name)}${u.id===uid?' (tú)':''}<small style="display:block;color:var(--txt2);font-weight:500;font-size:12px">${u.rides} ${u.rides===1?'salida':'salidas'} · ${m==='km'?'+'+fmtNum(u.up,0)+' m':fmtNum(u.km,0)+' km'}</small></div><div class="pts num">${m==='km'?fmtNum(u.km,0)+'<small style="font-size:11px;color:var(--txt2)"> km</small>':'+'+fmtNum(u.up,0)+'<small style="font-size:11px;color:var(--txt2)"> m</small>'}</div></div>`).join('');
+}
+function rkCtl(full){
+  const ids=rankIds();if(!ids.includes(RK.g))RK.g='all';
+  const f=full?'rankActFull()':'renderRankAct()';
+  return `<div class="chips" style="margin-bottom:8px">${ids.map(id=>`<button class="chip${RK.g===id?' on':''}" onclick="RK.g=${jsq(id)};${f}">${id==='all'?'👥 Toda la comunidad':(GP_ICO[(myGroup.grupetas[id]||{}).mod]||'🚴')+' '+esc(gpName(id))}</button>`).join('')}</div>
+   <div class="chips" style="margin-bottom:8px">${[['all','🚲 Todas las bicis'],...ACT_TP_K.map(k=>[k,ACT_TP[k][0]+' '+ACT_TP[k][1]])].map(([k,t])=>`<button class="chip${RK.tp===k?' on':''}" onclick="RK.tp='${k}';${f}">${t}</button>`).join('')}</div>
+   <div class="chips" style="margin-bottom:10px"><button class="chip${RK.m==='km'?' on':''}" onclick="RK.m='km';${f}">📏 Kilómetros</button><button class="chip${RK.m==='up'?' on':''}" onclick="RK.m='up';${f}">⛰️ Desnivel</button></div>`;
+}
+function renderRankAct(){
+  const el=$('rankAct');if(!el)return;
+  if(!me?.group||!myGroup){el.innerHTML=`<div class="rank"><div class="rrow"><div class="nm" style="color:var(--txt2);font-weight:500">Únete a la comunidad para ver los rankings.</div></div></div>`;return}
+  const l=rankListT(RK.g,RK.tp,RK.m);
+  el.innerHTML=rkCtl(false)+`<div class="rank">${l.length?rankRowsT(l,RK.m,5):`<div class="rrow"><div class="nm" style="color:var(--txt2);font-weight:500">${RK.tp==='all'?'Aún no hay salidas en este ranking':'Aún no hay salidas de este tipo. Cuentan desde ahora: elige el tipo al guardar tu salida'}</div></div>`}</div>`;
+}
+function rankActFull(){
+  if(!me?.group||!myGroup){toast('Únete a tu comunidad para ver los rankings');return}
+  const l=rankListT(RK.g,RK.tp,RK.m);const d=rankDocs[RK.g];
+  $('rideBody').innerHTML=sheetHead('🏆 Rankings')+`<p style="color:var(--txt2);margin:-8px 0 12px">Solo lo ven los miembros de ${esc(myGroup.name)}. ${d&&d.since?'Desde el '+fmtDate(iso(new Date(d.since))):'Temporada actual'}.</p>`+rkCtl(true)+`<div class="rank">${l.length?rankRowsT(l,RK.m):'<div class="rrow"><div class="nm" style="color:var(--txt2);font-weight:500">Aún no hay salidas en este ranking</div></div>'}</div>`;
+  openRideId=null;openSheet('sh-ride');
+}
 function addRank(a){
   const C=me?.group;if(!db||!uid||!C||!myGroup||!(+a.km>0))return;
-  const gs=[...(a.sport==='hike'||!a.va?[]:['']),   // VA 3.5: el ranking general solo suma rutas de VillorvinAdventure
+  if(a.tp&&!a.rkT){rankTypeWrite(a,1);a.rkT=1;try{store.set('acts',acts);saveActRemote(a)}catch(e){}}   // VA 3.16: ranking por tipo
+  const gs=[...(a.sport==='hike'?[]:['']),   // VA 3.16: el total de la comunidad suma TODAS las salidas en bici
    ...(a.gp&&(myGroup.grupetas||{})[a.gp]?[a.gp]:[])];if(!gs.length)return;   // v4.8: a pie no suma al ranking ciclista de la comunidad
   gs.forEach(g=>db.collection('rank').doc(C+'_'+(g||'all')).set({club:C,gp:g,period:'temporada',s:{[uid]:{n:myName(),km:FV.increment(+(+a.km).toFixed(1)),rides:FV.increment(1),up:FV.increment(Math.round(+a.up||0))}}},{merge:true}).catch(e=>console.warn('ranking',e)));
 }
@@ -2569,6 +2629,7 @@ function rankRows(l,max){
   return l.slice(0,max||50).map((u,i)=>`<div class="rrow${u.id===uid?' me':''}"><div class="pos p${i+1}">${i+1}</div><div class="face" style="background:${colorOf(u.name)}">${ini(u.name)}</div><div class="nm">${esc(u.name)}${u.id===uid?' (tú)':''}<small style="display:block;color:var(--txt2);font-weight:500;font-size:12px">${u.rides} ${u.rides===1?'salida':'salidas'}${u.up?' · +'+u.up+' m':''}</small></div><div class="pts num">${fmtNum(u.km,0)}<small style="font-size:11px;color:var(--txt2)"> km</small></div></div>`).join('');
 }
 function renderRank(){
+  try{renderRankAct()}catch(e){}
   const el=$('rank');if(!el)return;
   if(!me?.group||!myGroup){el.innerHTML=`<div class="rrow"><div class="nm" style="color:var(--txt2);font-weight:500">Únete a la comunidad para ver su ranking.</div></div>`;return}
   const l=rankList('all');
@@ -3980,6 +4041,7 @@ function openActDetail(id,fin){
     ${a.src==='strava'?`<a class="btn btn-line" style="font-size:15px;grid-column:1/-1;color:#FC4C02;border-color:#FC4C02;text-decoration:none" href="https://www.strava.com/activities/${Number(a.id)}" target="_blank" rel="noopener">Ver en Strava</a>`:''}
     <button class="btn btn-line" style="font-size:15px" onclick="renameAct(${a.id})">✏️ Cambiar nombre</button>
     <button class="btn btn-line" style="font-size:15px" onclick="redateAct(${a.id})">📅 Cambiar fecha</button>
+    <button class="btn btn-line" style="font-size:15px;grid-column:1/-1" onclick="changeActType(${a.id})">🏷️ Tipo: ${a.tp&&ACT_TP[a.tp]?ACT_TP[a.tp][0]+' '+ACT_TP[a.tp][1]:(a.sport==='hike'?'🥾 A pie':'sin elegir')} · cambiar</button>
     <button class="btn btn-line" style="font-size:15px;color:var(--red);grid-column:1/-1" onclick="deleteAct(${a.id})">🗑️ Borrar</button>
    </div>`;
   openRideId=null;openSheet('sh-ride');
@@ -7292,6 +7354,7 @@ async function finishLive(save){
   const pk=packRoute(r);
   const title=L.rideId?(L.rideTitle||'Salida en grupo'):(L.hike?'Ruta a pie':'Salida en bici');
   const a={id:Date.now(),name:title,date:iso(new Date(L.startT)),km:+L.km.toFixed(1),up:Math.round(r.up||L.up),mins,group:!!L.rideId,gp:(rides.find(x=>x.id===L.rideId)||{}).gp||'',...(rideOrg(rides.find(x=>x.id===L.rideId))?{va:1}:{}),mk:L.mk||null,...(L.hike?{sport:'hike'}:{}),...pk};
+  await pickActType(a);   // VA 3.16
   acts.unshift(a);store.set('acts',acts.slice(0,300));saveActRemote(a);if(!a.up&&a.poly)fixUp(a);addRank(a);
   const gain=Math.min(300,Math.round(L.km))+10+(L.rideId?30:0);
   addPoints(gain,L.rideId?{done:FV.increment(1)}:null);if(L.rideId&&me)me.done=(me.done||0)+1;
@@ -7724,6 +7787,7 @@ $('fileIn').onchange=async e=>{
     if(k<0)return;
     if(op[k][2]==='route'){importRouteGpx(pts,km,up,name);return}
     const dd=await askDate(a.date,'¿Qué día hiciste esta salida?');if(!dd)return;a.date=dd;   // VA 3.14
+    await pickActType(a);   // VA 3.16
     acts.unshift(a);store.set('acts',acts);saveActRemote(a);addRank(a);
     const gain=Math.min(300,Math.round(km))+10;addPoints(gain);
     renderActs();publishAct(a);checkBadges();addKmToBike(km);toast(`Actividad guardada · +${gain} puntos`);setTimeout(()=>openActDetail(a.id),500);
