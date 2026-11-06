@@ -1232,7 +1232,7 @@ html:not(.rs-simple) .rs-sonly{display:none!important}
   </div>
   <button class="li rs-pro" style="margin-top:14px" onclick="openPro()"><span class="em">⭐</span><div><b>Solicita la Pro de VillorvinAdventure</b><small>Para miembros. Misma cuenta, mismos datos.</small></div></button>
   <div class="shopline" id="shopLine" style="display:none"></div>
-  <p style="color:var(--txt2);font-size:13px;text-align:center;margin-top:20px">VillorvinAdventure Simple · versión 3.14.0</p>
+  <p style="color:var(--txt2);font-size:13px;text-align:center;margin-top:20px">VillorvinAdventure Simple · versión 3.15.0</p>
 </section>
 
 <!-- ============ BARRA INFERIOR ============ -->
@@ -1900,6 +1900,8 @@ async function openRide(id,keep){
    =================================================================== */
 const V_ME=20;                 // km/h a los que calculamos que va quien llega tarde
 let CATCH=null,catchT=null,catchMap=null;
+/* VA 3.15 — Salida en marcha a la que estás apuntado (desde 1 h antes hasta 12 h después de la hora de salida) */
+function rideNow(){const now=Date.now();try{return rides.filter(r=>joined(r)&&now>=rideStartMs(r)-3600000&&now<=rideStartMs(r)+12*3600000).sort((a,b)=>Math.abs(now-rideStartMs(a))-Math.abs(now-rideStartMs(b)))[0]||null}catch(e){return null}}
 function rideStartMs(r){return new Date(r.date+'T'+(r.hour||'08:30')+':00').getTime()}
 function rideEndMs(r){return rideStartMs(r)+((r.route&&r.route.mins)||180)*1.3*60000+3600000}
 function catchable(r){
@@ -5298,12 +5300,30 @@ function emerCard(){const c=emerC();
 const FD_APP_TXT='⚠️ El aviso de caída <b>solo funciona con la app abierta</b> (aunque la pantalla esté bloqueada). Si cierras la app, no avisa.';
 function sos(){if(live.on)sosRide();else sosInfo()}
 /* Comunidad → Seguridad: explicaciones y pruebas */
+/* VA 3.15 — Aviso al grupo de la salida en marcha aunque no estés grabando */
+async function groupAlertIdle(kind){
+  const r=rideNow();if(!r||!db||!uid||!ALERTS[kind])return false;
+  let p=null;try{const m=await myPos();if(m)p=[m.lat,m.lng]}catch(e){}
+  if(!p&&fam.on&&fam.trail&&fam.trail.length)p=fam.trail.at(-1);
+  if(!p)return false;
+  const now=Date.now(),al={type:kind,t:now,id:uid+'_'+now};
+  try{
+    await db.collection('rides').doc(r.id).collection('live').doc(uid).set({name:myName(),lat:+(+p[0]).toFixed(6),lng:+(+p[1]).toFixed(6),speed:0,t:now,km:0,alert:al},{merge:true});
+    try{pushEv({t:'alert',ride:r.id,id:al.id})}catch(e){}
+    const text=ALERTS[kind].msg+' 📍 https://maps.google.com/?q='+(+p[0]).toFixed(5)+','+(+p[1]).toFixed(5);
+    db.collection('rides').doc(r.id).collection('msgs').add({uid,name:myName(),text,ts:now}).catch(()=>{});
+    db.collection('rides').doc(r.id).update({lastMsg:{uid,name:myName(),text:text.slice(0,60),t:now}}).catch(()=>{});
+    toast('🆘 Aviso enviado al grupo de «'+(r.title||'tu salida')+'»',5000);return true;
+  }catch(e){console.warn('aviso grupo',e);return false}
+}
 function sosInfo(){
   openRideId=null;
   $('rideBody').innerHTML=sheetHead('🛡️ Seguridad')+`
   <div style="display:flex;flex-direction:column;gap:12px">
+   <button class="btn" style="background:var(--red);color:#fff;min-height:68px;font-size:19px;font-weight:800" onclick="sosMedical()">🚑 Accidente o problema médico</button>
+   <small style="color:var(--txt2);text-align:center;margin:-6px 0 0">Avisa a tu familia (si le compartes la ubicación) y a tu grupo si estás apuntado a una salida en marcha</small>
    <button class="btn btn-lime" style="min-height:64px" onclick="sendLoc()">📍 Enviar mi ubicación por WhatsApp</button>
-   <a class="btn" style="background:var(--red);color:#fff;min-height:64px;font-size:20px;text-decoration:none" href="tel:112">📞 Llamar al 112</a>
+   <a class="btn" style="background:transparent;border:2px solid var(--red);color:var(--txt);min-height:60px;font-size:19px;text-decoration:none" href="tel:112">📞 Llamar al 112</a>
    ${emerCard()}
    <div class="plc"><div class="pc-h"><span class="pc-tag">Quién te ayuda</span><b>🚑 Si te pasa algo en ruta</b></div>
     <small style="color:var(--txt2);display:block;margin-top:6px;line-height:1.5">• <b>En tus salidas y en las de tu grupeta:</b> 112 y aviso a tu contacto de emergencia.<br>• <b>En las rutas que organiza VillorvinAdventure:</b> te atiende su Asistencia (${ASIS_TXT}) y ellos avisan a tu familia si hace falta.<br>• El botón <b>SOS</b> está en el mapa (pestaña Rutas) mientras vas de ruta.</small></div>
@@ -5422,6 +5442,7 @@ function fallHelp(auto){
   const loc=fallPos();
   const msg=`${manual?'🆘 EMERGENCIA':'🚑 AVISO DE CAÍDA'} — VillorvinAdventure\n${myName()} ${manual?'ha pedido ayuda (accidente o problema médico)':'puede haber sufrido una caída en bici y no responde'}.${loc?'\n📍 Ubicación: '+loc:''}\n${va?'Asistencia VillorvinAdventure: '+ASIS_TXT+'.':'Emergencias: 112.'}`;
   if(!fd.test&&live.on&&live.rideId){try{sendAlert('fall')}catch(e){}}
+  else if(!fd.test){groupAlertIdle('fall')}   // VA 3.15: aunque no estés grabando
   const famOn=fam.on;famAlert('fall',fd.test);
   const B=$('fallBox');
   B.innerHTML=`<div style="font-size:52px">🆘</div><h2>${fd.test?'Prueba de emergencia':manual?'Emergencia':'Posible caída'}</h2>
@@ -6800,6 +6821,8 @@ async function startLive(opt){
   closeSheets();
   const wasPlan=plan.active;if(wasPlan){plan.active=false;plan.view=false;clearPlan(true);setPlanning(false)}
   go('rutas');
+  /* VA 3.15: grabar estando apuntado a una salida en marcha = grabar DENTRO de esa salida (el grupo te ve y recibes sus avisos) */
+  let autoR=null;if(!opt.rideId){autoR=rideNow();if(autoR){opt.rideId=autoR.id;opt.title=opt.title||autoR.title||'Salida en grupo';if(opt.hike==null)try{opt.hike=isHikeRide(autoR)}catch(e){}}}
   live={on:true,paused:false,voice:store.get('voice',true),follow:true,pts:[],km:0,up:0,lastAlt:null,startT:Date.now(),pausedMs:0,pauseStart:0,speed:0,alt:null,
     rideId:opt.rideId||null,rideTitle:opt.title||'',hike:opt.hike!=null?!!opt.hike:isHike(),members:{},mMarkers:{},lastPush:0,lastPushLL:null,warned:{},off:0,lastReroute:0,nav:null,wps:opt.wps||null};
   live.mk='L'+live.startT;
@@ -6823,7 +6846,7 @@ async function startLive(opt){
   if(live.rideId){listenGroup();groupTips()}
   renderLive();
   speak(live.nav?'Empezamos. Sigue la línea verde.':'Grabación iniciada. ¡Buena ruta!');
-  toast(live.rideId?'¡Salida en marcha! Tu grupo te ve en el mapa':'Grabando… mantén la pantalla encendida');
+  toast(autoR?'🛰️ Grabas dentro de «'+(autoR.title||'tu salida')+'»: tu grupo te ve y recibes sus avisos':live.rideId?'¡Salida en marcha! Tu grupo te ve en el mapa':'Grabando… mantén la pantalla encendida',autoR?6000:undefined);
 }
 
 
@@ -7101,7 +7124,7 @@ function pushPos(p,now){
   const moved=live.lastPushLL?hav(live.lastPushLL,p)*1000:1e9;
   if(now-live.lastPush<8000&&moved<40)return;
   live.lastPush=now;live.lastPushLL=p;
-  db.collection('rides').doc(live.rideId).collection('live').doc(uid).set({name:myName(),lat:+p[0].toFixed(6),lng:+p[1].toFixed(6),speed:Math.round(live.speed||0),t:now,km:+live.km.toFixed(2),...(live.catchTo?{late:true}:{})}).catch(e=>console.warn('live',e));
+  db.collection('rides').doc(live.rideId).collection('live').doc(uid).set({name:myName(),lat:+p[0].toFixed(6),lng:+p[1].toFixed(6),speed:Math.round(live.speed||0),t:now,km:+live.km.toFixed(2),late:!!live.catchTo},{merge:true}).catch(e=>console.warn('live',e));   // VA 3.15: merge → no borra el aviso (SOS) enviado justo antes
 }
 /* ===== v5.14 — 🎙️ WALKIE DEL PELOTÓN: mensajes de voz que suenan solos a todo el grupo ===== */
 const PTT_MAX=15000;
@@ -7562,7 +7585,9 @@ window.addEventListener('load',()=>setTimeout(liveRecoverCheck,2500));
 window.addEventListener('load',()=>setTimeout(famResume,4000));
 
 /* Botones que arrancan el modo en vivo */
-function toggleRec(){startLive({})}
+function toggleRec(){   // VA 3.15: si tienes un track en pantalla, se graba SIGUIÉNDOLO (no desaparece)
+  if(plan.active&&plan.route&&plan.route.coords&&plan.route.coords.length>1){const r=plan.route;startLive({route:r,wps:r.nav||r.wps});return}
+  startLive({})}
 function goNav(){
   const r=plan.route;if(!r)return;
   const wps=r.nav||r.wps;
