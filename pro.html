@@ -932,6 +932,33 @@ button,.btn,.li,.chip,.mini,.lvcatch,[onclick]{touch-action:manipulation;-webkit
 html:not(.rs-simple) .rs-sonly{display:none!important}
 .ubadge{display:inline-grid;place-items:center;min-width:20px;height:20px;padding:0 6px;margin-left:6px;border-radius:99px;background:#EF4444;color:#fff;font-size:12px;font-weight:800;line-height:1;vertical-align:2px}
 .tab.hasUnread{position:relative}.tab.hasUnread::after{content:"";position:absolute;top:6px;right:calc(50% - 18px);width:10px;height:10px;border-radius:50%;background:#EF4444;box-shadow:0 0 0 2px var(--bg)}
+
+/* VA 3.17.0 — Pantalla de salida más recogida: cortina para ver solo el mapa,
+   avisos agrupados en un botón y walkie en la misma fila */
+.lvpanel{transition:transform .3s ease,opacity .3s ease}
+#s-rutas.live.lvmin .lvpanel{transform:translateY(calc(100% + 30px));opacity:0;pointer-events:none!important}
+#s-rutas.live.lvmin .lvpanel>*{pointer-events:none!important}
+.lvhandle{display:none}
+#s-rutas.live .lvhandle{display:flex;justify-content:center;align-items:center;width:100%;min-height:22px;cursor:pointer}
+.lvhandle i{display:block;width:70px;height:9px;border-radius:9px;background:#4DA3FF;border:2px solid #06162E;box-shadow:0 2px 8px rgba(0,0,0,.55)}
+.lvshow{display:none}
+#s-rutas.live.lvmin .lvshow{display:flex;position:absolute;left:12px;right:12px;bottom:calc(14px + env(safe-area-inset-bottom));z-index:8;gap:10px;align-items:center}
+.lvshow .lvup{flex:1;min-height:58px;border-radius:99px;border:1px solid rgba(255,255,255,.22);background:rgba(6,22,46,.86);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);color:#fff;font:inherit;font-weight:800;font-size:16px;display:flex;align-items:center;justify-content:center;gap:10px;cursor:pointer}
+.lvshow .lvup b{font-size:20px;color:#4DA3FF;font-variant-numeric:tabular-nums}
+.lvshow .lvsosm{width:62px;height:62px;flex-shrink:0;border-radius:50%;border:0;background:#991B1B;color:#fff;font:inherit;font-weight:800;font-size:17px;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.4)}
+/* Avisos en un solo botón; el walkie al lado */
+.lvalert{grid-template-columns:auto 1fr!important}
+.lvalert .a-flat,.lvalert .a-help,.lvalert .a-wait,.lvalert .a-more{display:none}
+.lvalert .a-tog{border-color:rgba(245,158,11,.9)!important;padding:0 16px;white-space:nowrap}
+.lvalert .a-ptt{grid-column:auto!important;font-size:15px!important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lvalert.open{grid-template-columns:repeat(4,1fr)!important}
+.lvalert.open .a-flat,.lvalert.open .a-help,.lvalert.open .a-wait,.lvalert.open .a-more{display:block}
+.lvalert.open .a-ptt{grid-column:auto/span 3!important}
+.lvalert.open .a-tog{background:rgba(245,158,11,.85)!important;color:#06162E!important}
+/* Pelotón en una sola línea; se abre al tocarlo */
+.lvgroup{max-height:42px;overflow:hidden!important;padding:6px 12px!important;cursor:pointer}
+.lvgroup.big,.lvgroup:has(.lvcatch){max-height:150px;overflow-y:auto!important}
+.lvwind{padding:4px 12px!important}
 </style>
 </head>
 <body>
@@ -1006,7 +1033,9 @@ html:not(.rs-simple) .rs-sonly{display:none!important}
   </div>
   <div class="lv lvbanner" id="lvBanner"><span class="ar" id="lvArrow">⬆️</span><div><span class="dd" id="lvDist"></span><span class="tx" id="lvInstr"></span></div></div>
   
+  <div class="lvshow" id="lvShow"><button type="button" class="lvup" onclick="lvMin(false)" aria-label="Subir los datos">⌃ <b id="lvMinSp">0</b> km/h · Ver datos</button><button type="button" class="lvsosm" onclick="sos()">SOS</button></div>
   <div class="lv lvpanel">
+    <div class="lvhandle" onclick="lvMin(true)" role="button" aria-label="Bajar los datos para ver solo el mapa"><i></i></div>
     <div class="lvtop"><span class="lvstate" id="lvState">● GRABANDO</span><div class="lvside"><button class="cmpb" onclick="compassTap()" aria-label="Brújula"><svg viewBox="0 0 40 40" class="cmpNd"><circle cx="20" cy="20" r="18" fill="rgba(0,0,0,.18)" stroke="currentColor" stroke-opacity=".35" stroke-width="1.5"/><text x="20" y="7.6" font-size="6.4" font-weight="900" text-anchor="middle" fill="#EF4444" font-family="sans-serif">N</text><text x="34.2" y="22.2" font-size="5" font-weight="800" text-anchor="middle" fill="currentColor" font-family="sans-serif">E</text><text x="20" y="37" font-size="5" font-weight="800" text-anchor="middle" fill="currentColor" font-family="sans-serif">S</text><text x="5.8" y="22.2" font-size="5" font-weight="800" text-anchor="middle" fill="currentColor" font-family="sans-serif">O</text><path d="M20 9 L24.5 20 L15.5 20 Z" fill="#EF4444"/><path d="M20 31 L15.5 20 L24.5 20 Z" fill="#CBD5E1"/><circle cx="20" cy="20" r="2" fill="#0E1A2B"/></svg></button><button onclick="toggleVoice()" id="lvVoice" aria-label="Voz">🔊</button><button onclick="toggleFollow()" aria-label="Centrar en mí"><svg class="i" viewBox="0 0 24 24"><path d="M3 11 21 3l-8 18-2-8-8-2z"/></svg></button><button class="lvmore" onclick="lvSideMore()" aria-label="Más: capas, compartir con la familia y música">⋯</button><div class="lvpop"><button onclick="toggleLayer()" aria-label="Capas"><svg class="i" viewBox="0 0 24 24"><path d="m12 3 9 5-9 5-9-5 9-5z"/><path d="m3 13 9 5 9-5"/></svg></button><button onclick="shareLive()" id="lvShare" aria-label="Compartir en vivo con la familia">📡</button><button id="lvMusBtn" onclick="musResume()" aria-label="Volver a poner la música (abre Spotify)">🎵</button></div></div></div>
     <div class="lvstats">
     <div class="lvbig"><b class="num" id="lvSpeed">0</b><span>km/h</span></div>
@@ -1015,7 +1044,7 @@ html:not(.rs-simple) .rs-sonly{display:none!important}
     <button class="lvwind" id="lvWind" style="display:none" onclick="lwSay(true)" aria-label="Viento: toca para oírlo"></button>
     <div class="lvgrid nav" id="lvNavRow" style="display:none"><div><b class="num" id="lvLeft">—</b><span>km restantes</span></div><div><b class="num" id="lvEta">—</b><span>llegada</span></div><div><b class="num" id="lvUp">0</b><span>m subidos</span></div></div>
     <div class="lvgroup" id="lvGroup" style="display:none"></div>
-    <div class="lvalert" id="lvAlert" style="display:none"><button class="a-flat" onclick="sendAlert('mech')">⚙️ Avería</button><button class="a-help" onclick="sosMedical()">🚑 Accidente</button><button class="a-wait" onclick="sendAlert('lost')">🧭 Perdido</button><button class="a-more" onclick="moreAlerts()" aria-label="Más avisos">➕ Más</button><button class="a-ptt" id="lvPtt" aria-label="Walkie: mantén pulsado para hablar al grupo">🎙️ Mantén pulsado y habla al grupo</button></div>
+    <div class="lvalert" id="lvAlert" style="display:none"><button class="a-flat" onclick="sendAlert('mech')">⚙️ Avería</button><button class="a-help" onclick="sosMedical()">🚑 Accidente</button><button class="a-wait" onclick="sendAlert('lost')">🧭 Perdido</button><button class="a-more" onclick="moreAlerts()" aria-label="Más avisos">➕ Más</button><button type="button" class="a-tog" onclick="lvAvisos()" aria-label="Mostrar avisos al grupo">⚠️ Avisos</button><button class="a-ptt" id="lvPtt" aria-label="Walkie: mantén pulsado para hablar al grupo">🎙️ Mantén para hablar</button></div>
     <div class="lvmus" id="lvMus" style="display:none"></div>
     <div class="lvbtns"><button class="lvp" id="lvPause" onclick="togglePause()">⏸ Pausa</button><button class="lvs" onclick="stopLive()">⏹ Terminar</button><button class="lvmoon" onclick="saverOn()" aria-label="Modo ahorro: pantalla negra">🌙</button><button class="lvcam" onclick="camOpen()" aria-label="Cámara: fotos y vídeos">📷</button><button class="lvsos" onclick="sos()">SOS</button></div>
   </div>
@@ -1205,7 +1234,7 @@ html:not(.rs-simple) .rs-sonly{display:none!important}
     <button class="li" onclick="deleteAccount()"><span class="em">🗑️</span><div><b style="color:var(--red)">Borrar mi cuenta y mis datos</b><small>No se puede deshacer</small></div><svg class="i chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></button>
   </div>
   <div class="shopline" id="shopLine" style="display:none"></div>
-  <p style="color:var(--txt2);font-size:13px;text-align:center;margin-top:20px">VillorvinAdventure Pro · versión 3.16.0</p>
+  <p style="color:var(--txt2);font-size:13px;text-align:center;margin-top:20px">VillorvinAdventure Pro · versión 3.17.0</p>
 </section>
 
 <!-- ============ BARRA INFERIOR ============ -->
@@ -7007,7 +7036,7 @@ function onFix(pos){
   // Mi punto en el mapa
   const ll=[c.longitude,c.latitude];
   if(!meMarker){const el=document.createElement('div');el.style.cssText='width:20px;height:20px;border-radius:50%;background:#2563EB;border:3px solid #fff;box-shadow:0 0 0 8px rgba(37,99,235,.25)';meMarker=new maplibregl.Marker({element:el}).setLngLat(ll).addTo(map)}else meMarker.setLngLat(ll);
-  if(live.follow&&!lowPow()&&now-(live.camT||0)>=(live.eco?5000:1800)){live.camT=now;const ph=document.querySelector('.lvpanel')?.offsetHeight||300,bh=$('lvBanner').offsetHeight||0;map.easeTo({center:ll,zoom:Math.max(map.getZoom(),16),duration:live.eco?600:1200,padding:{top:bh+20,bottom:ph,left:0,right:0}})}
+  if(live.follow&&!lowPow()&&now-(live.camT||0)>=(live.eco?5000:1800)){live.camT=now;const ph=lvPH(),bh=$('lvBanner').offsetHeight||0;map.easeTo({center:ll,zoom:Math.max(map.getZoom(),16),duration:live.eco?600:1200,padding:{top:bh+20,bottom:ph,left:0,right:0}})}
   if(c.speed!=null&&c.speed>=0&&c.speed*3.6<90)live.speed=live.speed?live.speed*0.4+c.speed*3.6*0.6:c.speed*3.6;
   if(c.altitude!=null)live.alt=c.altitude;
   if(!live.paused){
@@ -7141,7 +7170,7 @@ function pushPos(p,now){
 const PTT_MAX=15000;
 const ptt={rec:null,chunks:[],t0:0,stream:null,toggle:false,played:{},queue:[],playing:false,unsub:null,since:0};
 function pttMime(){const L=['audio/webm;codecs=opus','audio/mp4','audio/webm','audio/ogg;codecs=opus'];try{return window.MediaRecorder&&L.find(m=>MediaRecorder.isTypeSupported(m))||''}catch(e){return ''}}
-function pttBtn(st,txt){const b=$('lvPtt');if(!b)return;b.classList.toggle('talk',st==='rec');b.classList.toggle('busy',st==='busy');b.textContent=txt||'🎙️ Mantén pulsado y habla al grupo'}
+function pttBtn(st,txt){const b=$('lvPtt');if(!b)return;b.classList.toggle('talk',st==='rec');b.classList.toggle('busy',st==='busy');b.textContent=txt||'🎙️ Mantén para hablar'}
 async function pttStart(){
   if(ptt.rec)return;ptt.cancel=0;
   if(!live.on||!live.rideId){toast('El walkie funciona en una salida en grupo');return}
@@ -7324,7 +7353,7 @@ function togglePause(){
   renderLive();
 }
 function toggleVoice(){live.voice=!live.voice;store.set('voice',live.voice);$('lvVoice').textContent=live.voice?'🔊':'🔇';if(live.voice)speak('Voz activada')}
-function toggleFollow(){live.follow=true;const m=live.pts.at(-1);if(m){const ph=document.querySelector('.lvpanel')?.offsetHeight||300;map.easeTo({center:[m[1],m[0]],zoom:16,padding:{top:20,bottom:ph,left:0,right:0}})}toast('Siguiendo tu posición')}
+function toggleFollow(){live.follow=true;const m=live.pts.at(-1);if(m){const ph=lvPH();map.easeTo({center:[m[1],m[0]],zoom:16,padding:{top:20,bottom:ph,left:0,right:0}})}toast('Siguiendo tu posición')}
 
 async function stopLive(){
   if(!live.on)return;
@@ -8246,6 +8275,34 @@ function vaPauseLoc(){
   const t=()=>{if(VA.on){setTimeout(()=>{try{({nov:vaNews,rutas:vaRutas,sup:vaSup})[m[1]]()}catch(e){}},700)}else if(n++<30)setTimeout(t,500)};setTimeout(t,800)})();
 /* v2.5: al terminar de cargar, vuelve a pintar la comunidad para que salga la tarjeta de VillorvinAdventure */
 try{renderGroup()}catch(e){}
+</script>
+<script>
+/* VA 3.17.0 — Cortina: desliza hacia abajo los datos para ver solo el mapa.
+   Avisos agrupados (⚠️ Avisos) y Pelotón en una línea. */
+function lvMin(on){var s=document.getElementById('s-rutas');if(!s)return;s.classList.toggle('lvmin',!!on);
+  try{var sp=document.getElementById('lvSpeed'),m=document.getElementById('lvMinSp');if(sp&&m)m.textContent=sp.textContent}catch(e){}
+  try{if(typeof live!=='undefined'&&live){live.camT=0}}catch(e){}}
+function lvPH(){var s=document.getElementById('s-rutas');if(s&&s.classList.contains('lvmin'))return 100;var p=document.querySelector('.lvpanel');return (p&&p.offsetHeight)||300}
+var lvAvT=null;
+function lvAvisos(force){var a=document.getElementById('lvAlert');if(!a)return;var on=(force===undefined)?!a.classList.contains('open'):!!force;
+  a.classList.toggle('open',on);clearTimeout(lvAvT);if(on)lvAvT=setTimeout(function(){lvAvisos(false)},12000);try{navigator.vibrate&&navigator.vibrate(10)}catch(e){}}
+(function(){
+  function swipe(el,dir,fn){if(!el)return;var y0=null,x0=0;
+    el.addEventListener('touchstart',function(e){if(e.target.closest&&e.target.closest('.a-ptt')){y0=null;return}var t=e.touches[0];y0=t.clientY;x0=t.clientX},{passive:true});
+    el.addEventListener('touchend',function(e){if(y0==null)return;var t=e.changedTouches[0],dy=t.clientY-y0,dx=Math.abs(t.clientX-x0);y0=null;
+      if(dx<Math.abs(dy)&&(dir>0?dy>60:dy<-50))fn()},{passive:true});}
+  swipe(document.querySelector('.lvpanel'),1,function(){lvMin(true)});
+  swipe(document.getElementById('lvShow'),-1,function(){lvMin(false)});
+  setInterval(function(){var s=document.getElementById('s-rutas');if(s&&s.classList.contains('lvmin')){var sp=document.getElementById('lvSpeed'),m=document.getElementById('lvMinSp');if(sp&&m)m.textContent=sp.textContent}},1000);
+  // Al terminar la salida, la próxima empieza con los datos a la vista
+  var s=document.getElementById('s-rutas');
+  if(s&&window.MutationObserver)new MutationObserver(function(){if(!s.classList.contains('live')){s.classList.remove('lvmin');lvAvisos(false)}}).observe(s,{attributes:true,attributeFilter:['class']});
+  // Tras mandar un aviso, se recogen los botones
+  document.addEventListener('click',function(e){var b=e.target.closest&&e.target.closest('#lvAlert .a-flat,#lvAlert .a-help,#lvAlert .a-wait,#lvAlert .a-more');if(b)setTimeout(function(){lvAvisos(false)},300)},true);
+  // Pelotón: tocar para ver la lista completa
+  var g=document.getElementById('lvGroup');
+  if(g)g.addEventListener('click',function(e){if(e.target.closest&&e.target.closest('button,a'))return;g.classList.toggle('big')});
+})();
 </script>
 </body>
 </html>
