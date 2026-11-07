@@ -1233,7 +1233,7 @@ html:not(.rs-simple) .rs-sonly{display:none!important}
     <button class="li" onclick="deleteAccount()"><span class="em">🗑️</span><div><b style="color:var(--red)">Borrar mi cuenta y mis datos</b><small>No se puede deshacer</small></div><svg class="i chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></button>
   </div>
   <div class="shopline" id="shopLine" style="display:none"></div>
-  <p style="color:var(--txt2);font-size:13px;text-align:center;margin-top:20px">VillorvinAdventure Pro · versión 3.26.0</p>
+  <p style="color:var(--txt2);font-size:13px;text-align:center;margin-top:20px">VillorvinAdventure Pro · versión 3.27.0</p>
 </section>
 
 <!-- ============ BARRA INFERIOR ============ -->
@@ -8122,7 +8122,7 @@ function vaData(){
   const fresh=()=>{try{renderVA()}catch(e){}};
   VA.subs.push(db.collection('va_rutas').onSnapshot(s=>{VA.rutas=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>String(b.date||'').localeCompare(String(a.date||''))||(b.t||0)-(a.t||0));fresh();if($('vaRutL'))vaRutas()},e=>console.warn('VA rutas',e)));
   VA.subs.push(db.collection('va_news').onSnapshot(s=>{const before=VA.news.length;VA.news=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.t||0)-(a.t||0));fresh();
-    const nu=VA.news.filter(n=>vaSee(n.gp)&&(n.t||0)>store.get('vaNewsSeen',0));if(nu.length&&before===0)toast('🆕 '+nu[0].title,3500);if($('vaNewL'))vaNews()},e=>console.warn('VA novedades',e)));
+    const nu=VA.news.filter(n=>vaSee(n.gp)&&(n.t||0)>store.get('vaNewsSeen',0));if(nu.length&&before===0)toast('🆕 '+nu[0].title,3500);setTimeout(vaNewsGate,800);if($('vaNewL'))vaNews()},e=>console.warn('VA novedades',e)));
   VA.subs.push(db.collection('va_config').doc('aviso').onSnapshot(s=>{VA.aviso=s.exists?s.data():null;fresh()},e=>console.warn('VA aviso',e)));
   VA.subs.push(db.collection('va_support').where('uid','==',uid).onSnapshot(s=>{const old=new Set(VA.sup.filter(x=>x.reply).map(x=>x.id+x.replyAt));VA.sup=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.t||0)-(a.t||0));
     if(VA.sup.some(x=>x.reply&&!x.seen&&!old.has(x.id+x.replyAt))&&old.size+VA.sup.length>0)toast('💬 VillorvinAdventure ha respondido tu consulta',3500);fresh();if($('vaSupL'))vaSupList()},e=>console.warn('VA consultas',e)));
@@ -8150,6 +8150,23 @@ function vaRutas(){
     :'<div class="empty">Todavía no hay rutas publicadas.</div>')+'</div>';
   openRideId=null;if(!$('sh-ride').classList.contains('show'))openSheet('sh-ride');
 }
+/* VA 3.27: al abrir la app se muestra la última novedad no leída; con «Leído» se cierra y entra en la app */
+function vaNewsGate(n){n=n||0;try{
+  if($('vaNG'))return;
+  const busy=$('vaIntro')||($('onb')&&$('onb').classList.contains('show'))||$('splash');
+  if(busy){if(n<40)setTimeout(()=>vaNewsGate(n+1),1500);return}
+  const read=store.get('vaNewsRead',[]);
+  const L=VA.news.filter(x=>vaSee(x.gp)&&x.kind!=='promo');const x=L[0];
+  if(!x||read.includes(x.id))return;
+  const d=document.createElement('div');d.id='vaNG';
+  d.style.cssText='position:fixed;inset:0;z-index:99990;background:rgba(2,10,22,.9);display:flex;align-items:center;justify-content:center;padding:16px';
+  d.innerHTML=`<div style="background:var(--card);color:var(--txt);border:1px solid var(--line);border-radius:22px;width:100%;max-width:480px;max-height:calc(100dvh - 32px);display:flex;flex-direction:column;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.5)">
+    <div style="padding:18px 18px 8px"><div style="font-size:13px;font-weight:800;color:var(--lime);letter-spacing:.5px">🆕 NOVEDAD · ${new Date(x.t||Date.now()).toLocaleDateString('es-ES')}</div><h2 style="font-size:21px;line-height:1.25;margin-top:6px">${esc(x.title||'Novedad')}</h2></div>
+    <div style="padding:0 18px 12px;overflow-y:auto;-webkit-overflow-scrolling:touch;flex:1"><p style="font-size:15.5px;line-height:1.5;white-space:pre-line">${esc(x.text||'')}</p>${vaUrl(x.link)?`<a href="${esc(vaUrl(x.link))}" target="_blank" rel="noopener" style="color:var(--lime);font-weight:700;display:inline-block;margin-top:8px">Ver más ›</a>`:''}</div>
+    <div style="padding:12px 18px 18px;border-top:1px solid var(--line)"><button class="btn btn-lime" id="vaNGok" style="width:100%">✅ Leído, entrar en la app</button></div></div>`;
+  document.body.appendChild(d);
+  $('vaNGok').onclick=()=>{try{store.set('vaNewsRead',VA.news.map(y=>y.id).slice(0,200))}catch(e){}d.remove()};
+}catch(e){try{$('vaNG')&&$('vaNG').remove()}catch(_){}}}
 function vaNews(){
   const L=VA.news.filter(n=>vaSee(n.gp));L.slice(0,20).forEach(n=>vaSeenKey('va_news_'+n.id));if(L.length)store.set('vaNewsSeen',Math.max(store.get('vaNewsSeen',0),L[0].t||0));
   $('rideBody').innerHTML=sheetHead('🆕 Novedades')+`<div id="vaNewL">`+(L.length?L.map(n=>`<div class="plc" style="margin-bottom:10px"><div class="pc-h"><span class="pc-tag">${n.kind==='trip'?'🧳 Próximo viaje · ':n.kind==='promo'?'📣 Publicidad · ':''}${new Date(n.t||Date.now()).toLocaleDateString('es-ES')}</span><b>${esc(n.title)}</b></div><p style="font-size:14.5px;line-height:1.45;white-space:pre-line;margin-top:6px">${esc(n.text)}</p>${vaUrl(n.link)?`<a href="${esc(vaUrl(n.link))}" target="_blank" rel="noopener" style="color:var(--lime);font-weight:700;display:inline-block;margin-top:6px">Ver más ›</a>`:''}</div>`).join(''):'<div class="empty">Aún no hay novedades.</div>')+'</div>';
