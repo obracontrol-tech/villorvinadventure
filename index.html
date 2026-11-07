@@ -8347,7 +8347,7 @@ function lvAvisos(force){var a=document.getElementById('lvAlert');if(!a)return;v
   setInterval(function(){var s=document.getElementById('s-rutas');if(s&&s.classList.contains('lvmin')){var sp=document.getElementById('lvSpeed'),m=document.getElementById('lvMinSp');if(sp&&m)m.textContent=sp.textContent}},1000);
   // Al terminar la salida, la próxima empieza con los datos a la vista
   var s=document.getElementById('s-rutas');
-  if(s&&window.MutationObserver)new MutationObserver(function(){if(!s.classList.contains('live')&&s.classList.contains('lvmin')){s.classList.remove('lvmin');lvAvisos(false)}   // VA 3.23: sin esto, la app se quedaba congelada (bucle infinito)}).observe(s,{attributes:true,attributeFilter:['class']});
+  if(s&&window.MutationObserver)new MutationObserver(function(){if(!s.classList.contains('live')&&s.classList.contains('lvmin')){s.classList.remove('lvmin');lvAvisos(false)}/* VA 3.23: solo si estaba recogida; si no, bucle infinito y la app se congelaba */}).observe(s,{attributes:true,attributeFilter:['class']});
   // Tras mandar un aviso, se recogen los botones
   document.addEventListener('click',function(e){var b=e.target.closest&&e.target.closest('#lvAlert .a-flat,#lvAlert .a-help,#lvAlert .a-wait,#lvAlert .a-more');if(b)setTimeout(function(){lvAvisos(false)},300)},true);
   // Pelotón: tocar para ver la lista completa
