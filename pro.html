@@ -1215,6 +1215,7 @@ html:not(.rs-simple) .rs-sonly{display:none!important}
   <div id="bikeBox" style="margin-bottom:16px"></div>
   <div id="adminBox" style="display:none;margin-bottom:16px"><button class="li" style="border-color:var(--bronze)" onclick="openAdmin()"><span class="em">🛡️</span><div><b>Panel de administración</b><small>Reportes, números y moderación</small></div><svg class="i chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></button></div>
   <div class="set">Modo claro <label class="sw"><input type="checkbox" id="swLight" onchange="setTheme(this.checked)"><span></span></label></div>
+  <div class="set" style="flex-wrap:wrap">🔆 Pantalla siempre encendida <label class="sw"><input type="checkbox" id="swAwake" onchange="awSet(this.checked)"><span></span></label><small style="width:100%;color:var(--txt2);font-size:13px;margin-top:4px">Con la app abierta, el móvil no se bloquea solo. Se apaga cuando tú lo bloqueas.</small></div>
   <div class="set" style="flex-wrap:wrap">🗣️ Resumen por voz en ruta <label class="sw"><input type="checkbox" id="swRes" onchange="store.set('resumen',this.checked);resPaint();toast(this.checked?'Te diré km, tiempo, desnivel y viento '+(store.get('resumenMin',30)===60?'cada hora':'cada media hora'):'Resumen por voz desactivado')"><span></span></label><div class="chips" id="resEvery" style="width:100%;margin:8px 0 0"><button class="chip" data-m="30" onclick="resSet(30)">Cada 30 min</button><button class="chip" data-m="60" onclick="resSet(60)">Cada hora</button></div><small style="width:100%;color:var(--txt2);font-size:12px;margin-top:4px">En ruta: kilómetros, tiempo, media, metros subidos, altitud y viento. Se oye junto a los avisos de viento.</small></div>
   <div class="set" style="flex-wrap:wrap">🔔 Avisos con la app cerrada <label class="sw"><input type="checkbox" id="swPush" onchange="setPush(this.checked)"><span></span></label><small id="pushInfo" style="width:100%;color:var(--txt2);font-size:12px;margin-top:4px">Salidas nuevas de tu comunidad, cambios, cancelaciones y recordatorio (la víspera y 1 hora antes). En ruta: pinchazo, esperad, ayuda, caída… Aunque tengas el móvil bloqueado. También en tu Garmin, iGPSPORT o reloj (ver abajo)</small><button class="btn btn-line" id="pushTestB" style="width:100%;margin-top:8px;font-size:14px" onclick="pushTest()">📲 Probar aviso con la app cerrada</button><label style="display:flex;gap:8px;align-items:center;width:100%;margin-top:10px;font-size:14px;cursor:pointer"><input type="checkbox" id="swPromo" onchange="setPromo(this.checked)"> 📣 Recibir también ofertas y publicidad de VillorvinAdventure</label></div>
   <button class="li" style="margin-bottom:10px" onclick="openMusic()"><span class="em">🎵</span><div><b>Música en ruta</b><small>Con Spotify, por el altavoz</small></div><svg class="i chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></button>
@@ -1232,7 +1233,7 @@ html:not(.rs-simple) .rs-sonly{display:none!important}
     <button class="li" onclick="deleteAccount()"><span class="em">🗑️</span><div><b style="color:var(--red)">Borrar mi cuenta y mis datos</b><small>No se puede deshacer</small></div><svg class="i chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></button>
   </div>
   <div class="shopline" id="shopLine" style="display:none"></div>
-  <p style="color:var(--txt2);font-size:13px;text-align:center;margin-top:20px">VillorvinAdventure Pro · versión 3.25.0</p>
+  <p style="color:var(--txt2);font-size:13px;text-align:center;margin-top:20px">VillorvinAdventure Pro · versión 3.26.0</p>
 </section>
 
 <!-- ============ BARRA INFERIOR ============ -->
@@ -7922,6 +7923,19 @@ function startFirebase(){
 /* ===== Arranque ===== */
 $('app').addEventListener('scroll',e=>{if(e.target.id==='app')e.target.scrollTop=0});
 setTheme(store.get('light',false));
+/* VA 3.26: pantalla siempre encendida mientras la app está abierta (hasta que el ciclista bloquee el móvil) */
+const AW={wl:null,vid:null};
+function awOn(){return store.get('awake',true)!==false}
+function awVideo(){try{if(!AW.vid){const v=document.createElement('video');v.setAttribute('playsinline','');v.setAttribute('muted','');v.muted=true;v.loop=true;v.src='va-awake.mp4';v.style.cssText='position:fixed;left:0;top:0;width:1px;height:1px;opacity:0;pointer-events:none;z-index:-1';document.body.appendChild(v);AW.vid=v}AW.vid.play().catch(()=>{})}catch(e){}}
+async function awakeOn(){if(!awOn()||document.visibilityState!=='visible')return;
+  if('wakeLock' in navigator){try{if(!(AW.wl&&!AW.wl.released)){AW.wl=await navigator.wakeLock.request('screen');AW.wl.addEventListener('release',()=>{AW.wl=null;setTimeout(awakeOn,800)})}return}catch(e){}}
+  awVideo()}
+function awakeOff(){try{AW.wl&&AW.wl.release()}catch(e){}AW.wl=null;try{AW.vid&&AW.vid.pause()}catch(e){}}
+function awSet(on){store.set('awake',!!on);if(on){awakeOn();toast('🔆 La pantalla no se apagará sola con la app abierta')}else{awakeOff();toast('La pantalla se apagará según los ajustes del móvil')}}
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')awakeOn()});
+['pointerdown','touchend','click'].forEach(ev=>document.addEventListener(ev,()=>{if(awOn()&&!(AW.wl&&!AW.wl.released)&&!(AW.vid&&!AW.vid.paused))awakeOn()},{passive:true,capture:true}));
+setTimeout(()=>{try{const s=$('swAwake');if(s)s.checked=awOn()}catch(e){}awakeOn()},1200);
+
 $('swNear').checked=store.get('nearOn',true);renderBikeSummary();renderInstall();renderOffmaps();netState();renderGroup();renderFeed();renderBadgeCount();
 paintName();renderRides();renderActs();
 go(store.get('tab','comunidad'));
