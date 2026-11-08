@@ -1193,6 +1193,8 @@ html:not(.rs-simple) .rs-sonly{display:none!important}
     <h2 id="pfName">Ciclista</h2>
     <p id="pfLvl">Nivel Bronce</p>
   </div>
+  <!-- VA 3.28: actualizar la app con un toque -->
+  <button id="updCard" onclick="rsUpdate(true)" style="display:flex;align-items:center;gap:12px;width:calc(100% - 32px);margin:4px 16px 14px;padding:14px 16px;border-radius:18px;border:2px solid var(--lime);background:linear-gradient(135deg,rgba(77,163,255,.20),rgba(77,163,255,.05));color:var(--txt);font-family:inherit;text-align:left;cursor:pointer;position:relative;z-index:1"><span style="font-size:28px">🔄</span><span style="flex:1"><b style="display:block;font-size:17px">Buscar actualización</b><small id="updSub" style="color:var(--txt2);font-size:13.5px">Toca para tener la última versión</small></span><span style="background:var(--lime);color:var(--on-lime);font-weight:800;font-size:13px;padding:7px 12px;border-radius:99px">Actualizar</span></button>
   <div class="f">
     <label class="l" for="nameIn">Tu nombre</label>
     <div class="row2"><input class="inp" id="nameIn" maxlength="24" placeholder="Ej. Joan Puig" autocomplete="name"><button class="mini" onclick="saveName()">Guardar</button></div>
@@ -1233,7 +1235,7 @@ html:not(.rs-simple) .rs-sonly{display:none!important}
     <button class="li" onclick="deleteAccount()"><span class="em">🗑️</span><div><b style="color:var(--red)">Borrar mi cuenta y mis datos</b><small>No se puede deshacer</small></div><svg class="i chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></button>
   </div>
   <div class="shopline" id="shopLine" style="display:none"></div>
-  <p style="color:var(--txt2);font-size:13px;text-align:center;margin-top:20px">VillorvinAdventure Pro · versión 3.27.0</p>
+  <p style="color:var(--txt2);font-size:13px;text-align:center;margin-top:20px">VillorvinAdventure Pro · versión 3.28.0</p>
 </section>
 
 <!-- ============ BARRA INFERIOR ============ -->
@@ -7923,6 +7925,31 @@ function startFirebase(){
 /* ===== Arranque ===== */
 $('app').addEventListener('scroll',e=>{if(e.target.id==='app')e.target.scrollTop=0});
 setTheme(store.get('light',false));
+/* VA 3.28: buscar actualización (botón en Perfil + aviso automático cuando hay versión nueva) */
+function rsVerOf(t){const m=String(t).match(/VillorvinAdventure (?:Pro|Simple) · versión ([0-9]+\.[0-9]+\.[0-9]+)/);return m?m[1]:''}
+const RS_VER=rsVerOf(document.documentElement.innerHTML);
+function rsNewer(a,b){const x=a.split('.').map(Number),y=b.split('.').map(Number);for(let i=0;i<3;i++){if((x[i]||0)!==(y[i]||0))return (x[i]||0)>(y[i]||0)}return false}
+function rsPage(){return location.pathname.replace(/[^/]*$/,'')+(/pro\.html$/.test(location.pathname)?'pro.html':'index.html')}
+async function rsLatest(){const r=await fetch(rsPage()+'?chk='+Date.now(),{cache:'no-store'});return rsVerOf(await r.text())}
+async function rsDoUpdate(){try{toast('🔄 Actualizando…')}catch(e){}
+  try{const r=await navigator.serviceWorker.getRegistration();if(r)await r.update()}catch(e){}
+  try{const k=await caches.keys();await Promise.all(k.filter(n=>/^va-v\d/.test(n)).map(n=>caches.delete(n)))}catch(e){}
+  setTimeout(()=>location.replace(rsPage()+'?u='+Date.now()),500)}
+let rsUpdBusy=false,rsUpdLast=0;
+async function rsUpdate(manual){if(rsUpdBusy)return;rsUpdBusy=true;const sub=document.getElementById('updSub');
+  if(manual&&sub)sub.textContent='Comprobando…';
+  try{const v=await rsLatest();rsUpdLast=Date.now();
+    if(v&&RS_VER&&rsNewer(v,RS_VER)){if(manual){rsDoUpdate();return}rsUpdBanner(v);if(sub)sub.textContent='🆕 Hay una versión nueva: '+v}
+    else{if(sub)sub.textContent='✅ Tienes la última versión ('+(RS_VER||v)+')';if(manual)try{toast('✅ Ya tienes la última versión ('+(RS_VER||v)+')')}catch(e){}}
+  }catch(e){if(sub)sub.textContent='Sin conexión: inténtalo luego';if(manual)try{toast('Sin conexión: inténtalo más tarde')}catch(_){}}
+  finally{rsUpdBusy=false}}
+function rsUpdBanner(v){if(document.getElementById('updBan'))return;const d=document.createElement('div');d.id='updBan';
+  d.style.cssText='position:fixed;left:12px;right:12px;top:calc(env(safe-area-inset-top,0px) + 10px);z-index:9500;display:flex;align-items:center;gap:10px;background:var(--lime);color:var(--on-lime);border-radius:16px;padding:12px 12px 12px 16px;box-shadow:0 8px 30px rgba(0,0,0,.35);font-weight:800;max-width:520px;margin:0 auto';
+  d.innerHTML='<span style="font-size:22px">🆕</span><span style="flex:1;font-size:15px;line-height:1.25">Nueva versión '+v+'<br><small style="font-weight:600">Toca para actualizar</small></span><button aria-label="Cerrar" style="border:0;background:rgba(0,0,0,.12);color:inherit;border-radius:50%;width:32px;height:32px;font-size:16px;font-weight:900;cursor:pointer">✕</button>';
+  d.onclick=e=>{if(e.target.tagName==='BUTTON'){d.remove();return}d.remove();rsDoUpdate()};document.body.appendChild(d)}
+setTimeout(()=>rsUpdate(false),8000);
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&Date.now()-rsUpdLast>600000)rsUpdate(false)});
+
 /* VA 3.26: pantalla siempre encendida mientras la app está abierta (hasta que el ciclista bloquee el móvil) */
 const AW={wl:null,vid:null};
 function awOn(){return store.get('awake',true)!==false}
