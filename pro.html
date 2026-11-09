@@ -1235,7 +1235,7 @@ html:not(.rs-simple) .rs-sonly{display:none!important}
     <button class="li" onclick="deleteAccount()"><span class="em">🗑️</span><div><b style="color:var(--red)">Borrar mi cuenta y mis datos</b><small>No se puede deshacer</small></div><svg class="i chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></button>
   </div>
   <div class="shopline" id="shopLine" style="display:none"></div>
-  <p style="color:var(--txt2);font-size:13px;text-align:center;margin-top:20px">VillorvinAdventure Pro · versión 3.28.0</p>
+  <p style="color:var(--txt2);font-size:13px;text-align:center;margin-top:20px">VillorvinAdventure Pro · versión 3.28.1</p>
 </section>
 
 <!-- ============ BARRA INFERIOR ============ -->
@@ -3349,8 +3349,9 @@ async function pushNear(){
 }
 function startNear(){if(nearTimer)return;setTimeout(pushNear,3000);nearTimer=setInterval(pushNear,90000)}
 function setNear(on){store.set('nearOn',on);if(!on&&db&&uid)db.collection('nearby').doc(uid).delete().catch(()=>{});else pushNear();toast(on?'Apareces en "Ciclistas cercanos"':'Ya no apareces en "Ciclistas cercanos"')}
-async function openNearby(){
-  if(!db){toast('Sin conexión');return}
+/* v5.39.1 — antes se llamaba igual que «Cerca de ti» (openNearby) y abría esa pantalla en su lugar */
+async function openNearClub(){
+  if(!db){toast('Conectando… vuelve a intentarlo en unos segundos');return}
   $('rideBody').innerHTML=sheetHead('Ciclistas de tu comunidad cerca')+`<p style="color:var(--txt2);margin:-8px 0 14px">Ciclistas de tu comunidad con VillorvinAdventure abierto a menos de 2 km en la última media hora. La posición es aproximada.</p><div id="nearList"><div class="empty">Buscando…</div></div>`;
   openRideId=null;openSheet('sh-ride');
   let h=null;try{h=await gpsOnce()}catch(e){h=hereLL()}
@@ -5166,6 +5167,8 @@ async function openNearby(tab){
   openTab='rides';
   $('rideBody').innerHTML=sheetHead('🌍 Cerca de ti')+`<div class="chips" style="margin:0 0 12px"><button class="chip${openTab==='rides'?' on':''}" onclick="openNearby('rides')">🚴 Salidas abiertas</button></div><div id="openBody"><div class="empty">Buscando cerca de ti…</div></div>`;
   openRideId=null;openSheet('sh-ride');
+  if(openHere&&Date.now()-(openNearby.t||0)>600000)openHere=null;openNearby.t=Date.now();
+  if(!db){$('openBody').innerHTML='<div class="empty">Conectando con el servidor… vuelve a intentarlo en unos segundos.</div>';return}
   if(!openHere){openHere=myLL();if(!openHere&&navigator.geolocation)openHere=await new Promise(res=>navigator.geolocation.getCurrentPosition(p=>res({lat:p.coords.latitude,lng:p.coords.longitude}),()=>res(null),{timeout:8000,maximumAge:600000}))}
   if(!openHere){$('openBody').innerHTML='<div class="empty">Activa la ubicación del móvil para ver lo que hay cerca.</div>';return}
   const cells=cellsNear(openHere.lat,openHere.lng);
@@ -5180,7 +5183,7 @@ async function openNearby(tab){
       clubList=s.docs.map(d=>({id:d.id,...d.data()})).map(o=>({...o,d:hav([openHere.lat,openHere.lng],[o.lat,o.lng])})).filter(o=>o.d<=OPEN_KM*1.5).sort((a,b)=>a.d-b.d);
       renderClubDir();
     }
-  }catch(e){console.warn('cerca',e);$('openBody').innerHTML='<div class="empty">No se pudo buscar. Si acabas de actualizar, hay que publicar las reglas v4.6.</div>'}
+  }catch(e){console.warn('cerca',e);const c=(e&&e.code)||'';$('openBody').innerHTML='<div class="empty">No se pudo buscar.<br>'+(c==='permission-denied'?'El servidor no da permiso (reglas de Firebase).':c==='unavailable'?'Sin conexión: inténtalo en un momento.':'Error: '+esc(c||String(e&&e.message||e).slice(0,80)))+'<br><button class="mini" style="margin-top:8px" onclick="openHere=null;openNearby()">🔄 Reintentar</button></div>'}
 }
 function renderOpenRides(){
   const B=$('openBody');if(!B)return;
@@ -5266,7 +5269,7 @@ function reqSet(rid,qid,st){db.collection('open').doc(rid).collection('reqs').do
 
 /* ===== Más funciones ===== */
 const FEATURES=[
-  ['Rodar en grupo',[['📡','Ciclistas cerca','Quién de la comunidad rueda a menos de 2 km','fn:openNearby()'],['🔔','Probar aviso de pinchazo','Escucha la sirena del pelotón','fn:alarmTest()'],['🛰️','Pelotón en vivo','GPS en vivo de tu grupo','peloton']]],
+  ['Rodar en grupo',[['📡','Ciclistas cerca','Quién de la comunidad rueda a menos de 2 km','fn:openNearClub()'],['🔔','Probar aviso de pinchazo','Escucha la sirena del pelotón','fn:alarmTest()'],['🛰️','Pelotón en vivo','GPS en vivo de tu grupo','peloton']]],
   ['Compartir y descubrir',[['🗺️','Rutas de la comunidad','Tracks que comparten los ciclistas para hacerlos cuando quieras','fn:openTracks()'],['☕','Puntos ciclistas','Fuentes, cafés, talleres y más','fn:openPois()'],['🎖️','Logros','Tus medallas','fn:openBadges()']]],
   ['Seguridad',[['🛡️','Seguridad','Contacto de emergencia, aviso de caída y 112','sos']]]
 ];
